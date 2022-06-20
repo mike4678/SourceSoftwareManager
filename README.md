@@ -1,4 +1,4 @@
-# SourceSoftwareManager更新说明
+# SourceSoftwareManager 说明文档
 Source Software Manager Version Infomation
 
 部署方式
@@ -39,6 +39,15 @@ Source Software Manager Version Infomation
 
 版本信息
 ====================================================
+#2022.06.20
+
+Data: Fix Bug
+
+Client Version Update To v1.2.3
+
+Server Manager Program Version Update To v1.1.1
+
+Server Version Update To v1.1.6
 
 #2022.05.12
 
@@ -53,6 +62,16 @@ Server Version Update To v1.1.5
 
 客户端
 =====================================================
+Version 1.2.3
+
+1.新增下载安装完成后不删除安装包选项
+
+2.修复重新安装无效的Bug
+
+3.修复有特殊字符下创建桌面快捷方式异常
+
+Version 1.2.0
+
 1.修改下载引擎从迅雷更换为aria2
 
 2.修改更新为可选择
@@ -67,12 +86,28 @@ Server Version Update To v1.1.5
 
 管理端
 =====================================================
+Version 1.1.1
+
+1.修复编辑软件信息时提示“修改失败”的Bug
+
+2.修改介绍文字保存方式（由于修改了介绍保存方式，故用户使用客户端也需要进行对应更新，对应版本：客户端 V1.2.3）
+
+3.新增下载数显示
+
+Version 1.1.0
+
 1.修复初次使用时无法保存数据的Bug
 
 2.软件新增界面增加版本更新说明选项
 
 服务端
 =====================================================
+Version 1.1.6
+
+1.新增下载数统计
+
+Version 1.1.5
+
 1.针对不同Mysql版本可能会出现无法初始化的Bug进行修复
 
 
