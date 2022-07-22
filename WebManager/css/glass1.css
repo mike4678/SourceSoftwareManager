@@ -1,0 +1,59 @@
+@charset "gb2312";
+/* CSS Document */
+*{
+	margin: 0;
+	padding: 0;
+	font-family: arial, 'Hiragino Sans GB', 'Microsoft Yahei', 'Î¢ÈíÑÅºÚ', 'ËÎÌå';
+	font-size: 16px;
+}
+
+.bg{
+  background-image: url("../images/bg_4.jpg");    /* ±³¾°Í¼ */
+  
+  background-position: center bottom;   /* ±³¾°ÑùÊ½ */
+  background-attachment: fixed;
+  background-size: cover;
+  height: 100%;
+  font-size: 100%;
+}
+
+.glass{
+	position: relative;                    /* ²£Á§ÑùÊ½ */
+	padding: 0;
+	border-bottom: 0px solid;
+	border-bottom-color: #ccc;
+	border-bottom-color: rgba(255, 255, 255, 0.2);
+	background-color: rgba(255, 255, 255, 0.2);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+	margin-left: 0px;                     /* ²£Á§Í¼²ã Æ«ÒÆ&´óÐ¡ */
+	margin-top: 50px;
+	height: 400px;
+	width: 500px;
+	left: 0;
+	
+}
+
+.blur {
+	background-image: url("../images/bg_4.jpg");    /* ±³¾°Í¼ */
+	height: 700px;                         /* Ä£ºýÍ¼²ã´óÐ¡ */
+	width: 500px;
+	position: relative;                   /* Ä£ºýÍ¼²ãÑùÊ½ */
+	padding: 0;
+	background-position: center bottom;
+	background-attachment: fixed;
+	background-size: cover;
+	font-size: 100%;
+
+  left:0
+  align: center;
+	/* Ä£ºýÂË¾µ */
+	filter: url(blur.svg#blur); /* FireFox, Chrome, Opera */
+	-webkit-filter: blur(10px); /* Chrome, Opera */
+	-moz-filter: blur(10px);
+	-ms-filter: blur(10px);
+	filter: blur(10px);
+
+    
+    filter: progid:DXImageTransform.Microsoft.Blur(PixelRadius=10, MakeShadow=false); /* IE6~IE9 */
+	left: 0;
+}

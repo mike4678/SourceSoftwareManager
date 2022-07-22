@@ -1,0 +1,148 @@
+@charset "gb2312";
+/* CSS Document */
+*{ margin:0; padding:0; font-family:arial, 'Hiragino Sans GB', 'Microsoft Yahei', 'Î¢ÈíÑÅºÚ', 'ËÎÌå'; font-size:12px;}
+.left{ float:left;}
+.right{ float:right;}
+img{
+	display: block;
+	border: 0;
+	text-align: center;
+}
+a{ color:#f9f9f9; text-decoration:none;}
+a:hover{ color:#1189E6;}
+li{ list-style:none;}
+.clear{ clear:both;}
+
+
+#top_top{ height:32px;}
+.logBox{position:fixed;_position:absolute;top:0;_top:expression(documentElement.scrollTop+0+'px');left:0; background:#000; height:32px;width:100%;box-shadow:0 1px 1px #ddd;z-index:9999;opacity:0.3;}
+.siderBar01{float:right;width:280px;}
+.login{
+	position: relative;
+	background: #000;
+	height: 32px;
+	margin: 0 auto;
+	padding: 0 10px;
+	_padding-top: 4px;
+	color: #666;
+	line-height: 30px;
+	text-align: right;
+}
+.login input,.login select{margin-top:-1px;_margin-top:1px;vertical-align:middle;}
+.login form a{color:#666;}
+.login form a:hover{color:#c00;}
+.login label input{width:80px;height:14px;}
+.login .siderNav{position:absolute;right:0;top:0;width:300px;_width:310px;}
+.btnLogin{width:40px;height:20px;border:none;cursor:pointer;color:#f9f9f9;}
+.btnLogin:hover{color:#333;}
+
+#bottom_top{ height:32px;}
+.CorpBox{position:fixed;_position:absolute;bottom:0;_bottom:expression(documentElement.scrollTop+0+'px');left:0;height:32px;width:100%;box-shadow:0 1px 1px #ddd;z-index:9999;}
+.siderBar01{float:right;width:280px;}
+.Corp{
+	position: relative;
+	height: 32px;
+	margin: 0 auto;
+	padding: 0 10px;
+	_padding-top: 4px;
+	color: #000;
+	line-height: 30px;
+	text-align: center;
+}
+
+.aSty01{margin:0;}
+.aSty01 dt{margin-top:6px;padding:5px 0 2px 0;border-top:1px solid #e5e5e5;}
+.aSty01 dd{margin:0;}
+.aSty01 dd a{color:#666;}
+.aSty01 dd a:hover{color:#c00;}
+
+.bg{
+  background-image: url("../images/bg_4.jpg");    /* ±³¾°Í¼ */
+  
+  background-position: center bottom;   /* ±³¾°ÑùÊ½ */
+  background-attachment: fixed;
+  background-size: cover;
+  height: 100%;
+  font-size: 100%;
+}
+.glass{
+	position: relative;                    /* ²£Á§ÑùÊ½ */
+	padding: 0;
+	border-bottom: 1px solid;
+	border-bottom-color: #ccc;
+	border-bottom-color: rgba(255, 255, 255, 0.2);
+	background-color: rgba(255, 255, 255, 0.2);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+	margin-left: 0px;                     /* ²£Á§Í¼²ã Æ«ÒÆ&´óÐ¡ */
+	margin-top: 50px;
+	height: 500px;
+	width: 800px;
+	left: 0;
+	
+}
+.blur {
+	background-image: url("../images/bg_4.jpg");    /* ±³¾°Í¼ */
+	height: 400px;                         /* Ä£ºýÍ¼²ã´óÐ¡ */
+	width: 800px;
+	position: relative;                   /* Ä£ºýÍ¼²ãÑùÊ½ */
+	padding: 0;
+	background-position: center bottom;
+	background-attachment: fixed;
+	background-size: cover;
+	font-size: 100%;
+
+  left:0
+  align: center;
+	/* Ä£ºýÂË¾µ */
+	filter: url(blur.svg#blur); /* FireFox, Chrome, Opera */
+	-webkit-filter: blur(10px); /* Chrome, Opera */
+	-moz-filter: blur(10px);
+	-ms-filter: blur(10px);
+	filter: blur(10px);
+
+    
+    filter: progid:DXImageTransform.Microsoft.Blur(PixelRadius=10, MakeShadow=false); /* IE6~IE9 */
+	left: 0;
+}
+
+.glas2{
+	position: absolute;                    /* ²£Á§ÑùÊ½ */
+	padding: 0;
+	border-bottom: 0px solid;
+	border-bottom-color: #ccc;
+	border-bottom-color: rgba(255, 255, 255, 0.2);
+	background-color: rgba(255, 255, 255, 0.2);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+	margin-left: 0px;                     /* ²£Á§Í¼²ã Æ«ÒÆ&´óÐ¡ */
+	margin-top: 0px;
+	height: 380px;
+	width: 400px;
+	left: 0;
+
+	top: 0px;
+}
+
+.blur1 {
+	background-image: url("../images/bg_4.jpg");    /* ±³¾°Í¼ */
+	height: 380px;                         /* Ä£ºýÍ¼²ã´óÐ¡ */
+	width: 200px;
+	position: relative;                   /* Ä£ºýÍ¼²ãÑùÊ½ */
+	padding: 0;
+	background-position: center bottom;
+	background-attachment: fixed;
+	background-size: cover;
+	font-size: 100%;
+
+  left:0
+  align: center;
+	/* Ä£ºýÂË¾µ */
+	filter: url(blur.svg#blur); /* FireFox, Chrome, Opera */
+	-webkit-filter: blur(10px); /* Chrome, Opera */
+	-moz-filter: blur(10px);
+	-ms-filter: blur(10px);
+	filter: blur(10px);
+
+    
+    filter: progid:DXImageTransform.Microsoft.Blur(PixelRadius=10, MakeShadow=false); /* IE6~IE9 */
+	left: 0;
+}
