@@ -49,7 +49,6 @@ Web管理端部署方式及相关说明：
 
 版本信息
 ====================================================
-<<<<<<< HEAD
 #2022.09.08
 
 Data：Add Function & Fix Bug
@@ -63,7 +62,6 @@ Server Version Update To v1.2.0
 Data：Fix Bug + Update Web
 
 Web Client Update To v1.0.1
->>>>>>> 2e23974ef5a840614a20c3e253eaefd2894de887
 
 #2022.08.01
 
