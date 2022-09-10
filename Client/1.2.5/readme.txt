@@ -1,0 +1,2 @@
+新增未知文件后缀推荐程序
+新增针对SourceSoftManager://协议的支持
