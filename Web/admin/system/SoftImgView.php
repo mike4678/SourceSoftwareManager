@@ -228,27 +228,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 <meta charset="utf-8">
 
 	<!-- Main Styles -->
-	<link rel="stylesheet" href="../assets/styles/style.min.css">
+	<link rel="stylesheet" href="../../css/style.min.css">
 	
 	<!-- Material Design Icon -->
-	<link rel="stylesheet" href="../assets/fonts/material-design/css/materialdesignicons.css">
+	<link rel="stylesheet" href="../../fonts/material-design/css/materialdesignicons.css">
 
 	<!-- mCustomScrollbar -->
-	<link rel="stylesheet" href="../assets/plugin/mCustomScrollbar/jquery.mCustomScrollbar.min.css">
+	<link rel="stylesheet" href="../../plugin/mCustomScrollbar/jquery.mCustomScrollbar.min.css">
 
 	<!-- Waves Effect -->
-	<link rel="stylesheet" href="../assets/plugin/waves/waves.min.css">
+	<link rel="stylesheet" href="../../plugin/waves/waves.min.css">
 
 	<!-- Sweet Alert -->
-	<link rel="stylesheet" href="../assets/plugin/sweet-alert/sweetalert.css">
-	
-	<!-- Jquery UI -->
-	<link rel="stylesheet" href="../assets/plugin/jquery-ui/jquery-ui.min.css">
-	<link rel="stylesheet" href="../assets/plugin/jquery-ui/jquery-ui.structure.min.css">
-	<link rel="stylesheet" href="../assets/plugin/jquery-ui/jquery-ui.theme.min.css">
+	<link rel="stylesheet" href="../../plugin/sweet-alert/sweetalert.css">
 
 	<!-- Dark Themes -->
-	<link rel="stylesheet" href="../assets/styles/style-dark.min.css">
+	<link rel="stylesheet" href="../../css/style-dark.min.css">
 <script src="../../js/jquery-1.8.3.min.js"></script>
 <style>
 .xm3,.xm9{float:left;}

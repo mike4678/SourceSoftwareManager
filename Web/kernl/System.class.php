@@ -125,12 +125,25 @@ class System extends DbMysql
 	
 	function front_table_list() //自动生成左边列表
 	{  
-		$tab = "<li><a class='waves-effect parent-item js__control' href='index.php'><i class='menu-icon mdi mdi-desktop-mac'></i><span>软件分类</span><span class='menu-arrow fa fa-angle-down'></span></a><ul class='sub-menu js__content'><li><a href='index.php'> |- 全部软件 </a></li>"; //初始化变量
+		if($_COOKIE['setclient'] == 'android')
+		{
+			if(strstr($_SERVER["QUERY_STRING"],"?/") == false)
+			{
+				$index_d = "index.php?".$_SERVER["QUERY_STRING"];
+			} else {
+				$index_d = "index.php?".$this -> strip_comments("?","/",$_SERVER["QUERY_STRING"]);
+			}
+			
+		} else {
+		
+			$index_d = "index.php?";
+		}
+		$tab = "<li><a class='waves-effect parent-item js__control' href='".$index_d."'><i class='menu-icon mdi mdi-desktop-mac' style='top:13px;left:5px'></i><span>软件分类</span><span class='menu-arrow fa fa-angle-down'></span></a><ul class='sub-menu js__content'><li><a href='".$index_d."'> |- 全部软件 </a></li>"; //初始化变量
 		$sql = "select * from zd_type;"; 
 		$result = $this -> query($sql); 
 		while ($row = $this -> fetch_array($result)) 
 		{
-			$tab.="<li><a href='index.php?/".$row['type']."'> |- ".$row['type']."</a></li>";
+			$tab.="<li><a href='".$index_d."/".$row['type']."'> |- ".$row['type']."</a></li>";
 			
 		}
 		$tab.="</ul></li>";
@@ -1313,7 +1326,17 @@ class System extends DbMysql
 				echo '<script>alert("操作成功！");</script>';
 			} 
 			
-		}      
+		}  
+		/* ---------------------------------------------------- */	
+									
+		//获取指定位置内容
+		/* ---------------------------------------------------- */	
+
+		function strip_comments($start,$end,$input) 
+		{ 
+			$substr = substr($input, strlen($start)+strpos($input, $start)-1,(strlen($input) - strpos($input, $end))*(-1));
+			return $substr;
+		}		
 }		
 ?>
 

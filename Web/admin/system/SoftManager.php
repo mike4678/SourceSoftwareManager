@@ -63,11 +63,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 			//检查是否通过异常方式提交
 			if($_POST['SoftSource'] == 'local')
 			{
-				$sql = "insert into `zd_software`(`softname`, `version`, `size`, `synopsis`, `updatetime`, `hash`, `run`, `type`, `introduce`, `downloadtype`, `downloadaddr`, `remark`, `nowrunfile`) VALUES ('".urldecode($_POST['name'])."','".$_POST['version']."','".floatval($_POST['size_data'])."','".urldecode($_POST['intro_Content'])."','".time()."','".$_POST['hash']."','".urldecode($_POST['exec'])."','".$_POST['type']."','".urldecode($_POST['detail_Content'])."','0','','".$_POST['pathdef']."','".$_POST['pre_exec']."');";
+				$sql = "insert into `zd_software`(`softname`, `version`, `size`, `synopsis`, `updatetime`, `hash`, `run`, `type`, `introduce`, `downloadtype`, `downloadaddr`, `remark`, `nowrunfile`, `softwaretype`) VALUES ('".urldecode($_POST['name'])."','".$_POST['version']."','".floatval($_POST['size_data'])."','".urldecode($_POST['intro_Content'])."','".time()."','".$_POST['hash']."','".urldecode($_POST['exec'])."','".$_POST['type']."','".urldecode($_POST['detail_Content'])."','0','','".$_POST['pathdef']."','".$_POST['pre_exec'].",'".$_POST['softwaretype']."');";
 				
 			} else {
 			
-				$sql = "insert into `zd_software`(`softname`, `version`, `size`, `synopsis`, `updatetime`, `hash`, `run`, `type`, `introduce`, `downloadtype`, `downloadaddr`, `remark`, `nowrunfile`) VALUES ('".urldecode($_POST['name'])."','".$_POST['version']."','".floatval($_POST['size_data'])."','".urldecode($_POST['intro_Content'])."','".time()."','".$_POST['hash']."','".urldecode($_POST['exec'])."','".$_POST['type']."','".urldecode($_POST['detail_Content'])."','1','".$_POST['fileoutsidedata']."','','');";
+				$sql = "insert into `zd_software`(`softname`, `version`, `size`, `synopsis`, `updatetime`, `hash`, `run`, `type`, `introduce`, `downloadtype`, `downloadaddr`, `remark`, `nowrunfile`, `softwaretype`) VALUES ('".urldecode($_POST['name'])."','".$_POST['version']."','".floatval($_POST['size_data'])."','".urldecode($_POST['intro_Content'])."','".time()."','".$_POST['hash']."','".urldecode($_POST['exec'])."','".$_POST['type']."','".urldecode($_POST['detail_Content'])."','1','".$_POST['fileoutsidedata']."','','','".$_POST['softwaretype']."');";
 			}			
 			if (!$dou->query($sql)) 
 			{
@@ -96,7 +96,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 					   `introduce`='".urldecode(str_replace(PHP_EOL,'@#cr#@',$_POST['detail_Content']))."',
 					   `type`='0',
 					   `remark`='".$_POST['pathdef']."',
-					   `nowrunfile`='".$_POST['pre_exec']."'";
+					   `nowrunfile`='".$_POST['pre_exec']."',
+					   `softwaretype`='".$_POST['softwaretype']."'";
 				
 			} else {
 			
@@ -111,6 +112,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 					   `type`='".$_POST['type']."',
 					   `introduce`='".urldecode($_POST['detail_Content'])."',
 					   `type`='1',
+					   `softwaretype`='".$_POST['softwaretype']."',
 					   `downloadaddr`='".$_POST['fileoutsidedata']."';";
 			}			
 			if (!$dou->query($sql)) 
@@ -303,6 +305,17 @@ $(function () { //文件上传处理
 				<div class="panel">
 				<table class="table">
 				<tr><td class="xmtd">软件名称</td><td><input name="name" type="text" tabindex="1" value="<?php echo $dou -> SoftwareDataInfo('softname',floatval($_GET['id']))?>" required="required"/>
+				<tr><td class="xmtd">软件类别</td><td>					<select name='softwaretype'> 
+					 <?php
+						$stype = $dou -> SoftwareDataInfo('softwaretype',floatval($_GET['id']));
+						if($stype == 'pc')
+						{
+								echo '<option value="pc" selected="selected" >PC</option><option value="android">安卓</option>';								
+							} else {
+								echo '<option value="pc">PC</option><option value="android" selected="selected" >安卓</option>';
+							}	
+					?> 
+					</select></td></tr>
 				<tr><td class="xmtd">软件分类</td><td>					<select name='type'> 
 					 <?php
 						$tmp_type = $dou -> SoftwareDataInfo('type',floatval($_GET['id']));

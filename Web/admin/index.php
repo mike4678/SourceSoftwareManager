@@ -1,6 +1,6 @@
 <?php 
 require("../kernl/Init.php"); 
-
+error_reporting(E_ERROR);
 //************** 处理登陆状态
 $dou -> WSCS_Check();                    //安全检查，防护系统
 $state = $dou -> AccountState();

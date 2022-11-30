@@ -46,9 +46,13 @@ switch ( $_SERVER[ 'REQUEST_METHOD' ] ) //获取操作方式
 		break;
 
 	case 'POST':
+		if(!empty($_POST['search']))
+		{
+			$table_name = $dou->content( $addr[ 2 ], 'list_name' ) . ' Where softname Like "%'.$_POST['search'].'%" ';
+		} else {
 		$ID_Dele = implode( "','", $_POST[ 'id' ] );
 		print_r($ID_Dele);
-		$dou->DelData( $table_name, 'id', $ID_Dele, 'POST' );
+		$dou->DelData( $table_name, 'id', $ID_Dele, 'POST' );}
 		break;
 }
 ?>

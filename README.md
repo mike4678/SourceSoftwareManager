@@ -49,6 +49,16 @@ Web管理端部署方式及相关说明：
 
 版本信息
 ====================================================
+#2022.12.01
+
+Data：Add Function & Fix Bug
+
+Client Version Update To v1.2.6
+
+Server Version Update To v1.2.2
+
+Manager Version Update To v1.1.2
+
 #2022.09.08
 
 Data：Add Function & Fix Bug
@@ -56,7 +66,7 @@ Data：Add Function & Fix Bug
 Client Version Update To v1.2.5
 
 Server Version Update To v1.2.0
-=======
+
 #2022.08.12
 
 Data：Fix Bug + Update Web
@@ -96,6 +106,10 @@ Server Version Update To v1.1.5
 
 客户端
 =====================================================
+Version 1.2.6
+
+1.针对发布版本，修改服务器地址的设置位置
+
 Version 1.2.5
 
 1.新增未知文件后缀推荐程序
@@ -132,6 +146,10 @@ Version 1.2.0
 
 管理端
 =====================================================
+Version 1.1.5
+
+1.新增手机软件的管理
+
 Version 1.1.1
 
 1.修复编辑软件信息时提示“修改失败”的Bug
@@ -148,6 +166,10 @@ Version 1.1.0
 
 Web管理端
 =====================================================
+Version 1.0.2
+
+1.Bug修复
+
 Version 1.0.1
 
 *该版本由于重新设计，因此与1.0.0版本不兼容，部分参数可能需要重新设定
@@ -166,6 +188,10 @@ Version 1.0.0
 
 服务端
 =====================================================
+Version 1.2.2
+
+1.优化修改数据库安装
+
 Version 1.2.0
 
 1.针对手机端可能存在问题进行了修复

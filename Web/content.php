@@ -1,5 +1,11 @@
 <?php
-$table = "<tr><td class=\"mailbox-subject\"><span class=\"mailbox-subject-title\" >{softname}</span><br><br>简介：{synopsis}</td><td style=\"text-align:center\">{version}</td><td style=\"text-align:center\">{size} KB</td><td>{updatetime^&data}</td><td style=\"text-align:center\"><a class='ico-item mdi mdi-download' href='d.php?pid={id}')>下载</a></td></tr>";
+if($_COOKIE["setclient"] == 'android')
+{
+	$table = "<tr><td class=\"mailbox-subject\"><span class=\"mailbox-subject-title\" >{softname}(版本号:{version} 大小:{size} KB)</span><br><br>简介：{synopsis}</td><td>{updatetime^&data}</td><td style=\"text-align:center\"><a class='ico-item mdi mdi-download' href='d.php?pid={id}')>下载</a></td></tr>";
+} else {
+	$table = "<tr><td class=\"mailbox-subject\"><span class=\"mailbox-subject-title\" >{softname}</span><br><br>简介：{synopsis}</td><td style=\"text-align:center\">{version}</td><td style=\"text-align:center\">{size} KB</td><td>{updatetime^&data}</td><td style=\"text-align:center\"><a class='ico-item mdi mdi-download' href='d.php?pid={id}')>下载</a></td></tr>";
+}
+
 //处理页码
 $PageNum = $dou->AddrConvery( $_GET );
 if ( strstr( $PageNum[ 3 ], 'id' ) != "" || is_numeric( $PageNum[ 3 ] ) ) {
@@ -17,27 +23,46 @@ if ( strstr( $PageNum[ 3 ], 'id' ) != "" || is_numeric( $PageNum[ 3 ] ) ) {
         </div>
         <div class="table-responsive mailbox-messages">
         <table class="table table-hover table-striped">
-        <thead><tr><th style="text-align:center">软件名</th><th style="text-align:center">版本</th><th style="text-align:center">容量</th><th style="text-align:center">更新时间</th><th>操作</th></tr></thead>
-<?php 
+		<?php
+		if($_COOKIE["setclient"] == 'android')
+		{
+			echo '<thead><tr><th style="text-align:center">软件名</th><th style="text-align:center">更新时间</th><th>操作</th></tr></thead>';
+		} else {
+			echo '<thead><tr><th style="text-align:center">软件名</th><th style="text-align:center">版本</th><th style="text-align:center">容量</th><th style="text-align:center">更新时间</th><th>操作</th></tr></thead>';
+		} 
 $Page_size = $dou->Info('pagedisplay'); 
 if($_SERVER["REQUEST_METHOD"] == "POST")
 {
-
-	$sql = 'select * from zd_software Where softname Like "%'.$_POST['search'].'%"' ; 
+	if($_COOKIE["setclient"] == 'android')
+	{
+		$sql = 'select * from zd_software Where softname Like "%'.$_POST['search'].'%" AND softwaretype = "mobile"' ; 
+	} else {
+		$sql = 'select * from zd_software Where softname Like "%'.$_POST['search'].'%" AND softwaretype = "pc"' ; 
+	}
 
 }
 if($_SERVER["REQUEST_METHOD"] == "GET")
 {
 	if( count($addr) > 1 && is_numeric($addr[1]) != True)
 	{
-	
-		$sql = 'select * from zd_software Where type = \''.$addr[1].'\''; 
-		
+		if($_COOKIE["setclient"] == 'android')
+		{
+			$sql = 'select * from zd_software Where type = \''.$addr[1].'\' AND softwaretype = "mobile"';  
+		} else {
+			$sql = 'select * from zd_software Where type = \''.$addr[1].'\' AND softwaretype = "pc"'; 
+		}
+
 	} else {
 
-		$sql = 'select * from zd_software'; 
+		if($_COOKIE["setclient"] == 'android')
+		{
+			$sql = 'select * from zd_software Where softwaretype = "mobile"';  
+		} else {
+			$sql = 'select * from zd_software Where softwaretype = "pc"'; 
+		}
 	}
 }
+//print_r($sql);
 $result = $dou -> query($sql); 
 $count = $dou -> num_rows($result); 
 if($count < 1)

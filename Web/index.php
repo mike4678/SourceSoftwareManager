@@ -3,10 +3,21 @@ require("kernl/Init.php");
 
 $dou -> WSCS_Check();                    //安全检查，防护系统
 $addr = $dou -> AddrConvery($_GET);	 //初始化参数
+if($_GET['type'] != "")
+{
+	$_COOKIE['setclient'] = 'android';
+	setcookie("setclient", 'android', time() + 3600, "/", $_SERVER['SERVER_NAME'], isset($_SERVER["HTTP"]), true);
+	echo '<input type="text" hidden id="setclient" value="android">';
+} else {
+	$_COOKIE['setclient'] = '';
+	setcookie("setclient", '', time() + 3600, "/", $_SERVER['SERVER_NAME'], isset($_SERVER["HTTP"]), true);
+	echo '<input type="text" hidden id="setclient" value="pc">';
+}
+
 
 //生成首页Head部分
 $context = stream_context_create(array('http'=>array('ignore_errors'=>true)));
-$value = file_get_contents(HttpsCheck(). $_SERVER['HTTP_HOST'] .  '/softmanager/template/index.html', FALSE, $context);
+$value = file_get_contents(HttpsCheck(). $_SERVER['HTTP_HOST'] . Templater , FALSE, $context);
 preg_match_all("|{(.*)}|U", $value, $out, PREG_PATTERN_ORDER); //寻找文本中的{}字段内容
 $tlist = 0;
 while ($tlist <= count($out[1]) - 1)  
@@ -67,5 +78,17 @@ if(file_exists(strtolower($file)) != TRUE)  //检查页面是否存在
 	<script src="plugin/waves/waves.min.js"></script>
 	<script src="plugin/moment/moment.js"></script>
 	<script src="js/main.min.js"></script>
+	<script>
+	function GetClient()
+	{
+		if (document.getElementById("setclient").value == 'android')
+		{
+			document.getElementById("clientid").href = 'Client/Client.apk';
+		} else {
+			document.getElementById("clientid").href = 'Client/Client.zip';
+		}
+	}
+	GetClient()
+	</script>
 </body>
 </html>
