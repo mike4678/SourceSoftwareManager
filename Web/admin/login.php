@@ -1,6 +1,12 @@
 <?php 
 require("../kernl/Init.php"); //初始化基础参数
 
+//判断是否初次使用
+if($dou -> Info('Is_FirstRun') == '0')
+{
+	header("Location: First.php"); //重定向浏览器
+}
+
 //判断之前的登陆状态
 $state = $dou -> AccountState();
 if ($state != 'Access denied') 
