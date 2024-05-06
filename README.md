@@ -9,11 +9,11 @@ Source Software Manager Version Infomation
 
 目前火山版本仍处于测试版，如果您有任何意见和建议，非常感谢您与我沟通
 
-Server端：已开发完成，基础测试正常，注意：如果需要在Server 2012以下的系统使用，需使用VS2017进行编译，如果为2012以上的版本，可正常使用VS2019进行编译
+Server端：已开发完成，目前大部分Bug已修复
 
-Manager端：已开发完成，基础测试正常
+Manager端：已开发完成，目前大部分Bug已修复
 
-Client端：Beta版，仍在加紧开发修复Bug中
+Client端：Beta版，目前大部分Bug已修复
 
 Android端：待客户端开发完成后，开始编写
 
