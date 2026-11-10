@@ -52,11 +52,9 @@ ConfigServerPort=7777 服务器端口号
 
 Web管理端部署方式及相关说明：
 
-1.Web管理端目前仅在IIS下Chrome内核下测试通过
+1.Web管理端支持php7/8
 
-2.1.部署很简单，在IIS中添加整个目录，然后在Mysql中导入install.sql文件（注：数据库必须与服务端为同一个数据库，例如服务端的数据库表为：TestDB，则Web管理端导入也必须导入到TestDB表中）（1.0.1之前版本）
-
-2.2.部署很简单，在IIS中添加整个目录即可（1.0.1之前版本）
+2.网站无独立数据库，需搭配服务端使用
 
 3.到kernl目录下，找到conf.php文件，用记事本等软件打开，按照说明修改里面的值，然后保存
 
@@ -133,6 +131,12 @@ Web管理端部署方式及相关说明：
 
 五、版本信息
 ====================================================
+#2026.11.10
+
+Data：Fix Web Bug & Web Support nginx php 7/8
+
+Web Client Update To v1.0.3
+
 #2024.05.13
 
 Data：Update Release Version
