@@ -1,199 +1,178 @@
 <?php
-if ( !defined( 'source' ) )
-	header( "Location: ../login.php" ); //重定向浏览器
-
-$FilePath = str_replace( '\\', '/', __FILE__ ) ? str_replace( '\\', '/', __FILE__ ) : $_SERVER[ 'SCRIPT_FILENAME' ];
-
-if ( $dou->content( $addr[ 2 ], 'list_name' ) == 'error' ) {
-	echo $dou->Admin_ErrorPage( $addr[ 1 ], $addr[ 2 ], $FilePath ); //如果不存在则跳转到错误界面
-	exit;
-
-} else {
-
-	$table_name = $dou->content( $addr[ 2 ], 'list_name' );
-	$table = $dou->content( $addr[ 2 ], 'table' );
-
+/* ---------------------------------------------------- */
+/* 后台列表页（日志 / 意见 / 软件）
+/* 安全修订说明（2026）：
+/*  1. 表名经 safeIdent 白名单校验，搜索词 quote() 转义，消除注入
+/*  2. 模板字段统一转义：普通字段 h()，嵌入 JS 字符串的 data 字段 js_text()
+/*  3. 页码与分页链接重写，修复页码恒为 1 且链接拼接 HTTP_HOST 的问题
+/*  4. 删除请求先校验再执行，失败不再继续渲染页面
+/* ---------------------------------------------------- */
+if (!defined('source')) {
+    header("Location: ../login.php");
+    exit;
 }
 
-//处理页码
-$PageNum = $dou->AddrConvery( $_GET );
-if ( strstr( $PageNum[ 3 ], 'id' ) != "" || is_numeric( $PageNum[ 3 ] ) ) {
-	$PageCount = "http://" . $_SERVER[ 'HTTP_HOST' ] . $_SERVER[ 'PHP_SELF' ] . '?/' . $PageNum[ 1 ] . '/' . $PageNum[ 2 ];
-} else {
-	$PageCount = "http://" . $_SERVER[ 'HTTP_HOST' ] . $_SERVER[ 'PHP_SELF' ] . '?' . $_SERVER[ 'QUERY_STRING' ];
+$FilePath = str_replace('\\', '/', __FILE__) ?: (isset($_SERVER['SCRIPT_FILENAME']) ? $_SERVER['SCRIPT_FILENAME'] : '');
+
+$listKey = isset($addr[2]) ? $addr[2] : '';
+
+if ($dou->content($listKey, 'list_name') == 'error') {
+    echo $dou->Admin_ErrorPage(isset($addr[1]) ? $addr[1] : '', $listKey, $FilePath);
+    exit;
 }
 
-//页码处理完成
-switch ( $_SERVER[ 'REQUEST_METHOD' ] ) //获取操作方式
-{
-	case 'GET':
+$table_name = $dou->content($listKey, 'list_name');
+$tableTpl   = $dou->content($listKey, 'table');
+$tableTpl   = $tableTpl == 'error' ? '' : $tableTpl;
+$validTable = $dou->safeIdent($table_name);
 
-		//判断数组第三个中是否带有id字样，如果没有则判断为页数
-		if ( count( $PageNum ) > 3 ) 
-		{
-			if ( strstr( $PageNum[ count( $addr ) - 1 ], 'id' ) != "" ) //如果带有id字样
-			{
-				$dou->DelData( $table_name, 'id', str_replace( 'id', '', $PageNum[ count( $addr ) - 1 ] ), 'GET' );
-			}
-			
-		} else {
-			
-			if ( strstr( $PageNum[ 3 ], 'id' ) != "" ) //如果带有id字样
-			{
-				$dou->DelData( $table_name, 'id', str_replace( 'id', '', $PageNum[ 3 ] ), 'GET' );
-			}
-		}
-		break;
+if ($validTable === false) {
+    echo $dou->Admin_ErrorPage(isset($addr[1]) ? $addr[1] : '', $listKey, $FilePath);
+    exit;
+}
 
-	case 'POST':
-		if(!empty($_POST['search']))
-		{
-			$table_name = $dou->content( $addr[ 2 ], 'list_name' ) . ' Where softname Like "%'.$_POST['search'].'%" ';
-		} else {
-		$ID_Dele = implode( "','", $_POST[ 'id' ] );
-		print_r($ID_Dele);
-		$dou->DelData( $table_name, 'id', $ID_Dele, 'POST' );}
-		break;
+// ---------- 页码 ----------
+$tab  = isset($addr[1]) ? $addr[1] : 'system';
+$page = 1;
+if (isset($addr[3]) && is_numeric($addr[3])) {
+    $page = to_int($addr[3], 1);
+}
+if ($page < 1) {
+    $page = 1;
+}
+
+$search = '';
+$where  = '';
+
+// ---------- 请求处理 ----------
+switch ($_SERVER['REQUEST_METHOD']) {
+    case 'GET':
+        // 兼容 /id12 形式的删除
+        $last = end($addr);
+        if (is_string($last) && strpos($last, 'id') === 0) {
+            $dou->DelData($validTable, 'id', substr($last, 2), 'GET');
+            exit;
+        }
+        break;
+
+    case 'POST':
+        if (!empty($_POST['search']) && is_string($_POST['search'])) {
+            $search = trim($_POST['search']);
+            if (function_exists('mb_substr')) {
+                $search = mb_substr($search, 0, 50, 'UTF-8');
+            }
+            if ($search !== '') {
+                $where = " WHERE `softname` LIKE " . $dou->quote('%' . $search . '%');
+            }
+        } elseif (!empty($_POST['id'])) {
+            $ids = is_array($_POST['id']) ? $_POST['id'] : array($_POST['id']);
+            $dou->DelData($validTable, 'id', implode(',', array_map('strval', $ids)), 'POST');
+            exit;
+        }
+        break;
 }
 ?>
 <script>
-<?php echo $dou->content($addr[2],'script'); ?>
+<?php echo $dou->content($listKey, 'script'); ?>
 </script>
 <form method="post" action="#">
 	<div class="row">
-<?php 
-print($dou->content($addr[2],'table_head')) ; 
-$Page_size = $dou->Info('pagedisplay'); 
-$result = $dou->query('select * from '. $table_name ); 
-$count = $dou->num_rows($result); 
-if($count < 1)
-{  //如果获取到的数据小于1，则表示没有数据
-	
-	echo '<tr><td>&nbsp;</td><td>&nbsp;&nbsp;没有更多的数据了</td></tr>'; 
-	
-} else {	
-	
-	$page_count = ceil($count/$Page_size); 
+<?php
+echo $dou->content($listKey, 'table_head');
 
-	$init = 1; 
-	$page_len = 7; 
-	$max_p = $page_count; 
-	$pages = $page_count; 
+$Page_size = to_int($dou->Info('pagedisplay'), 20);
+if ($Page_size < 1 || $Page_size > 200) {
+    $Page_size = 20;
+}
 
-//判断当前页码 
-	if( empty( $addr[3] ) || $addr[3] < 0 )
-	{ 
-		$page = 1; 
-		
-	}else { 
-		
-		$page = $addr[3]; 
-	} 
+$count    = (int)$dou->get_one("SELECT COUNT(*) FROM `" . $validTable . "`" . $where);
 
-	$offset = $Page_size * ( $page - 1 ); 
-	$sql = "select * from $table_name limit $offset,$Page_size"; 
-	$result = $dou->query($sql); 
-	while ($row = $dou->fetch_array($result)) 
-	{ 
-		//处理值的带入
-		preg_match_all("|{(.*)}|U", $table, $out, PREG_PATTERN_ORDER); //寻找文本中的{}字段内容
-		$tlist = 0;
-		$data = array();
-		$name = array();
-		$value = $table;
-		while ($tlist <= count($out[1]) - 1)  
-		{
-			if(substr_count($out[1][$tlist],"^&") > 0)
-			{
-				$data1 = explode('^&',$out[1][$tlist]);
-				switch($data1[1])
-				{
-			
-					case 'data':
-						$value = str_ireplace("{".$out[1][$tlist]."}",date('Y-m-d H:i:s',$row[$data1[0]]),$value);
-						break;
-				
-					case 'ipdata':
-						$value = str_ireplace("{".$out[1][$tlist]."}",$row[$data1[0]]." ( ".$dou -> Get_IPData($row[$data1[0]])." )",$value);
-						break;
-			
-				}
+if ($count < 1) {
+    echo '<tr><td>&nbsp;</td><td>&nbsp;&nbsp;没有更多的数据了</td></tr>';
+    $key = '';
+} else {
+    $page_count = (int)ceil($count / $Page_size);
+    if ($page > $page_count) {
+        $page = $page_count;
+    }
+    $offset = ($page - 1) * $Page_size;
 
-			} else {
-				
-				$name[] = "{".$out[1][$tlist]."}";
-				$data[] = $row[$out[1][$tlist]];
-				$value = str_ireplace("{".$out[1][$tlist]."}",$row[$out[1][$tlist]],$value);
-		
-			}
-			
-			$tlist = $tlist + 1;
-		
-		} 
-		$value = str_ireplace('$_SERVER[PHP_SELF]?$_SERVER[QUERY_STRING]',$_SERVER[PHP_SELF]."?".$_SERVER[QUERY_STRING],$value);
-	
-	//$value = preg_replace($name,$data,$table);
-		echo $value;
+    $result = $dou->query("SELECT * FROM `" . $validTable . "`" . $where
+        . " ORDER BY `id` DESC LIMIT " . $offset . "," . $Page_size);
+    while ($row = $dou->fetch_array($result)) {
+        $html = $tableTpl;
+        preg_match_all('/{([A-Za-z0-9_^&]+)}/', $tableTpl, $out, PREG_PATTERN_ORDER);
+        if (!empty($out[1])) {
+            foreach (array_unique($out[1]) as $token) {
+                $phpTpl = '{' . $token . '}';
+                if (strpos($token, '^&') !== false) {
+                    $parts  = explode('^&', $token);
+                    $field  = $parts[0];
+                    $mode   = isset($parts[1]) ? $parts[1] : '';
+                    $value  = isset($row[$field]) ? $row[$field] : '';
+                    if ($mode === 'data') {
+                        if (is_numeric($value) && (int)$value > 0) {
+                            $show = date('Y-m-d H:i:s', (int)$value);
+                        } else {
+                            $ts   = strtotime((string)$value);
+                            $show = $ts ? date('Y-m-d H:i:s', $ts) : (string)$value;
+                        }
+                    } elseif ($mode === 'ipdata') {
+                        $show = (string)$value . ' ( ' . $dou->Get_IPData((string)$value) . ' )';
+                    } else {
+                        $show = (string)$value;
+                    }
+                    $html = str_replace($phpTpl, h($show), $html);
+                } else {
+                    $value = isset($row[$token]) ? $row[$token] : '';
+                    // data 字段常被放进 javascript:info("...") 的字符串里
+                    $html = str_replace($phpTpl, $token === 'data' ? h(js_text($value)) : h($value), $html);
+                }
+            }
+        }
+        // 删除链接里的占位替换（相对地址，避免 Host 注入）
+        $html = str_replace('$_SERVER[PHP_SELF]?$_SERVER[QUERY_STRING]', h('index.php?/' . $tab . '/' . $listKey), $html);
+        echo $html;
+    }
 
-	
-	}	
-	$page_len = ($page_len%2)?$page_len:$pagelen+1;//页码个数 
-	$pageoffset = ($page_len-1)/2;//页码个数左右偏移量 
-	$key = '<ul class="pagination">';  
-	if( $page != 1)
-	{ 
-		
-		$key.="<li><a href=\"".$PageCount."/".($page-1)."\">上一页</a></li>"; 
-		
-	}else { 
-		//$key.="第一页 ";//第一页 
-		$key.='<li class="disabled"><a href="#" aria-label="Previous"><span aria-hidden="true">上一页</span></a></li>'; //上一页 
-	} 
-	if($pages>$page_len)
-	{ 
-		//如果当前页小于等于左偏移 
-		if($page<=$pageoffset)
-		{ 
-			$init=1; 
-			$max_p = $page_len; 
-			
-		} else {//如果当前页大于左偏移 
-			//如果当前页码右偏移超出最大分页数 
-			if($page+$pageoffset>=$pages+1)
-			{ 
-				
-				$init = $pages-$page_len+1; 
-				
-			}else{ 
-				//左右偏移都存在时的计算 
-				$init = $page-$pageoffset; 
-				$max_p = $page+$pageoffset; 
-			} 
-		} 
-	} 
-	for($i=$init;$i<=$max_p;$i++)
-	{ 
-		
-		if($i==$page)
-		{ 
-			
-			$key.=' <li class="active"><a>'.$i.'</a></li>';  
-			
-		} else { 
-			
-			$key.="<li><a href=\"".$PageCount."/".$i."\">".$i."</a></li>"; 
-		} 
-	} 
-	if($page!=$pages)
-	{ 
-		
-		$key.="<li><a href=\"".$PageCount."/".($page+1)."\">下一页 </span></a></li>";//下一页
-		
-	}else { 
-		
-		$key.='<li class="disabled"><a href="#" aria-label="Next"><span aria-hidden="true">下一页 </span></a></li>';//下一页  
-	} 
-	$key.='</ul>'; 
+    // ---------- 分页 ----------
+    $basePath = 'index.php?/' . rawurlencode($tab) . '/' . rawurlencode($listKey) . '/';
+    $page_len = 7;
+    $pageoffset = 3;
+    $init  = 1;
+    $max_p = $page_count;
+    if ($page_count > $page_len) {
+        if ($page <= $pageoffset) {
+            $init  = 1;
+            $max_p = $page_len;
+        } elseif ($page + $pageoffset >= $page_count + 1) {
+            $init  = $page_count - $page_len + 1;
+            $max_p = $page_count;
+        } else {
+            $init  = $page - $pageoffset;
+            $max_p = $page + $pageoffset;
+        }
+    }
+
+    $key = '<ul class="pagination">';
+    if ($page > 1) {
+        $key .= '<li><a href="' . h($basePath . ($page - 1)) . '">上一页</a></li>';
+    } else {
+        $key .= '<li class="disabled"><a href="#" aria-label="Previous"><span aria-hidden="true">上一页</span></a></li>';
+    }
+    for ($i = $init; $i <= $max_p; $i++) {
+        if ($i == $page) {
+            $key .= '<li class="active"><a>' . $i . '</a></li>';
+        } else {
+            $key .= '<li><a href="' . h($basePath . $i) . '">' . $i . '</a></li>';
+        }
+    }
+    if ($page < $page_count) {
+        $key .= '<li><a href="' . h($basePath . ($page + 1)) . '">下一页 </a></li>';
+    } else {
+        $key .= '<li class="disabled"><a href="#" aria-label="Next"><span aria-hidden="true">下一页 </span></a></li>';
+    }
+    $key .= '</ul>';
 }
 ?>
 		</table>

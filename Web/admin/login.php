@@ -1,28 +1,41 @@
 <?php 
 require("../kernl/Init.php"); //初始化基础参数
 
-//判断是否初次使用
+//判断是否初次使用（安装页在安装完成后会被重命名，这里做存在性判断，避免死循环跳转）
 if($dou -> Info('Is_FirstRun') == '0')
 {
-	header("Location: First.php"); //重定向浏览器
+	$installPage = 'First.php';
+	if (!file_exists(dirname(__FILE__) . '/First.php')) {
+		$installPage = '15f#ir$st.php';
+	}
+	if (file_exists(dirname(__FILE__) . '/' . $installPage)) {
+		header("Location: " . rawurlencode($installPage));
+		exit;
+	}
 }
 
 //判断之前的登陆状态
 $state = $dou -> AccountState();
-if ($state != 'Access denied') 
+if ($state != 'Access denied')
 {
 	header("Location: index.php"); //重定向浏览器到播放界面
+	exit;
 }
 
 //基础网页内容
+$ref = isset($_GET['ref']) ? (string)$_GET['ref'] : '';
+$ref = preg_replace('/[^\p{Han}\p{Latin}\p{N}_\-\/.&=]/u', '', $ref);
+if (strpos($ref, '//') !== false || strpos($ref, '..') !== false || strpos($ref, '://') !== false) {
+	$ref = '';
+}
 
 $var = $dou -> LoadingBingBackground() . '<div class="login-page">
   <div class="login-container">
-    <div class="login-form"> <a class="brand"><span class="brand-text">&nbsp&nbsp&nbsp&nbsp&nbsp'. $dou -> Info('corp').'后台管理系统</span> </a>
+    <div class="login-form"> <a class="brand"><span class="brand-text">&nbsp&nbsp&nbsp&nbsp&nbsp'. h($dou -> Info('corp')).'后台管理系统</span> </a>
       <div class="form-login">
         <div class="input-container">
           <div class="input-group user-icon">
-	  <input type="hidden" id="return" name="return" value="'.$_GET['ref'].'">
+	  <input type="hidden" id="return" name="return" value="'.h($ref).'">
             <input class="cbi-input-user" id="cbi-input-user" type="text" name="luci_username" value="admin">
             <label class="border" for="cbi-input-user"></label>
           </div>
@@ -46,7 +59,7 @@ $var = $dou -> LoadingBingBackground() . '<div class="login-page">
 				var input = document.getElementsByName(\'luci_password\')[0];
 				if (input)
 					input.focus();</script>    <footer>
-      <div> <a class="luci-link">'.$dou -> Info('bottom').'</a></div>
+      <div> <a class="luci-link">'.h($dou -> Info('bottom')).'</a></div>
     </footer> 
 </div></div></div>';
 	
@@ -57,7 +70,7 @@ $var = $dou -> LoadingBingBackground() . '<div class="login-page">
 <html lang="zh-cn">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title><?php echo $dou -> Info('corp'); ?>后台管理系统</title>
+<title><?php echo h($dou -> Info('corp')); ?>后台管理系统</title>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
 <meta name="format-detection" content="telephone=no, email=no">
 <meta name="apple-mobile-web-app-capable" content="yes">

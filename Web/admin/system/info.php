@@ -18,8 +18,10 @@
 /* 您可能是下一个?
 /* ---------------------------------------------------- */
 
-if (!defined('source'))
+if (!defined('source')) {
 	header("Location: ../login.php"); //重定向浏览器
+	exit;
+}
 @header("content-Type: text/html; charset=utf-8"); //语言强制
 ob_start();
 date_default_timezone_set('Asia/Shanghai');//此句用于消除时间差
@@ -138,11 +140,11 @@ function show($varName)
 //保留服务器性能测试结果
 foreach ($_POST as $post=>$value) //把参数传入变量key中
 
-$valInt = isset($_POST['pInt']) ? $_POST['pInt'] : "未测试";
+$valInt = isset($_POST['pInt']) ? h($_POST['pInt']) : "未测试";
 
-$valFloat = isset($_POST['pFloat']) ? $_POST['pFloat'] : "未测试";
+$valFloat = isset($_POST['pFloat']) ? h($_POST['pFloat']) : "未测试";
 
-$valIo = isset($_POST['pIo']) ? $_POST['pIo'] : "未测试";
+$valIo = isset($_POST['pIo']) ? h($_POST['pIo']) : "未测试";
 
 foreach ($_GET as $key=>$value) //把参数传入变量key中
 $arr = explode("/",$key);
@@ -218,7 +220,7 @@ if ($_POST['act'] == 'MySQL检测')
 elseif ($_POST['act'] == '函数检测')
 {
 
-	$funRe = "函数".$_POST['funName']."支持状况检测结果：".isfun1($_POST['funName']);
+	$funRe = "函数".h($_POST['funName'])."支持状况检测结果：".isfun1(h($_POST['funName']));
 
 } 
 elseif ($_POST['act'] == '邮件检测')
@@ -235,15 +237,15 @@ elseif ($_POST['act'] == '邮件检测')
 //网络速度测试
 if(isset($_POST['speed']))
 {
-	$speed=round(100/($_POST['speed']/1000),2);
+	$speed=round(100/(((float)$_POST['speed'])/1000),2);
 }
-elseif($_GET['/system/info/?speed']=="0")
+elseif(isset($_GET['/system/info/?speed']) && $_GET['/system/info/?speed']=="0")
 {
 	$speed=6666.67;
 }
-elseif(isset($_GET['/system/info/?speed']) and $_GET['/system/info/?speed']>0)
+elseif(isset($_GET['/system/info/?speed']) and ((float)$_GET['/system/info/?speed'])>0)
 {
-	$speed=round(100/($_GET['/system/info/?speed']/1000),2); //下载速度：$speed kb/s
+	$speed=round(100/(((float)$_GET['/system/info/?speed'])/1000),2); //下载速度：$speed kb/s
 }
 else
 {
@@ -1353,7 +1355,7 @@ foreach ($able as $key=>$value) {
 
 		?>
 
-    <?php echo (false!==eregi("phpinfo",$disFuns))? '<font color="red">×</font>' :'<a href="javascript:SystemBox(2,\'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'].'?/phpinfo\',\'\',\'PHP Information\',600,800,\'\')"> PHPINFO</a>';?>
+    <?php echo '<font color="red">× 已禁用</font>';?>
 
     </td>
     <td width="31%">PHP版本（php_version）：</td>
@@ -1537,7 +1539,7 @@ foreach ($able as $key=>$value) {
 
 	<tr>
 		<td>默认支持函数（enable_functions）：</td>
-		<td colspan="3"><?php echo '<a href="javascript:SystemBox(2,\'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'].'?/Function\',\'\',\'PHP Function Information\',400,600,\'\')"> 请点这里查看详细！</a>'; ?></td>	
+		<td colspan="3">已禁用外链式的函数清单页（原入口属于调试后门）</td>	
 	</tr>
 	<tr>
 		<td>被禁用的函数（disable_functions）：</td>
@@ -1895,7 +1897,7 @@ else
    </td>
   </tr>
   </table>
-  <?php echo (isset($_GET['/system/info/?speed']))?"下载1000KB数据用时 <font color='#cc0000'>".$_GET['/system/info/?speed']."</font> 毫秒，下载速度："."<font color='#cc0000'>".$speed."</font>"." kb/s，需测试多次取平均值，超过10M直接看下载速度":"<font color='#cc0000'>&nbsp;未探测&nbsp;</font>" ?>
+  <?php echo (isset($_GET['/system/info/?speed']))?"下载1000KB数据用时 <font color='#cc0000'>".h((string)((float)$_GET['/system/info/?speed']))."</font> 毫秒，下载速度："."<font color='#cc0000'>".h((string)$speed)."</font>"." kb/s，需测试多次取平均值，超过10M直接看下载速度":"<font color='#cc0000'>&nbsp;未探测&nbsp;</font>" ?>
 
     </td>
   </tr>

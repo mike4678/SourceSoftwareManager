@@ -1,144 +1,137 @@
-<?php 
-require("../kernl/Init.php"); 
-error_reporting(E_ERROR);
-//************** 处理登陆状态
-$dou -> WSCS_Check();                    //安全检查，防护系统
-$state = $dou -> AccountState();
-$addr = $dou -> AddrConvery($_GET);	 //初始化参数
-if ($state == 'Access denied') 
-{
-	if( count($addr) > 0 && $addr[1] != 'exit') 
-	{
-		header("Location: login.php?ref=/".$addr[1]."/".$addr[2]);
-		
-	} else { 
-		
-		header("Location: login.php"); }
-	
-} else { 
-	
-	$dou->cookie("state", time(), time()+3600);  //更新时间
+<?php
+/* ---------------------------------------------------- */
+/* 程序名称: 后台入口
+/* 安全修订说明（2026）：
+/*  1. 删除 ?/phpinfo 与 ?/Function 两个调试后门（未授权即可枚举环境与函数）
+/*  2. 登录态改由会话 + HMAC 令牌判定，Cookie 不再存放可逆密码
+/*  3. 备份下载的文件名做白名单校验并限制在备份目录内
+/*  4. 模块文件包含增加路径白名单与 realpath 校验，杜绝任意文件包含
+/*  5. 模板变量统一转义
+/* ---------------------------------------------------- */
+require("../kernl/Init.php");
+
+$dou->WSCS_Check();                    // 安全检查，防护系统
+$state = $dou->AccountState();
+$addr  = $dou->AddrConvery($_GET);     // 初始化参数
+
+// ---------- 登录状态 ----------
+if ($state === 'Access denied') {
+    $ref = '';
+    if (isset($addr[1]) && $addr[1] !== '' && $addr[1] !== 'exit') {
+        $ref = '/' . rawurlencode($addr[1]) . '/' . rawurlencode(isset($addr[2]) ? $addr[2] : '');
+    }
+    header("Location: login.php" . ($ref === '' ? '' : '?ref=' . urlencode($ref)));
+    exit;
 }
-	
-//************** 处理页面请求
-switch ($addr[1])
-{
-	case 'exit':
-		session_start();
-		session_unset($Session);
-		session_destroy();
-		setcookie("usr", null, time()-3600);  
-		setcookie("pwd", null, time()-3600);  
-		setcookie("state", null, time()-3600); 
-		//exit;
-		echo '<script language="JavaScript">SystemBox(3,"您已成功退出系统！");</script>';
-		echo '<script language="JavaScript">location.replace("login.php");</script>'; 	
-	break;
-		
-	case 'phpinfo':
-		phpinfo();
-	exit();
-	
-	case 'Function':
-		$arr = get_defined_functions();
-		echo "<pre>";
-		echo "当前系统所支持的所有函数,和自定义函数\n";
-		print_r($arr);
-		echo "</pre>";
-	exit();
-	
-	case 'downbackup':
-		session_start();
-		$file = fopen($dou->info('BackupFilePath').'/'.$_SESSION["filename"] ,"rb"); // 打开文件 
-		$name = iconv('UTF-8', 'GBK//IGNORE', $_SESSION["filename"]);
-		$size = filesize($dou->info('BackupFilePath').'/'.$_SESSION["filename"] );
-			// 输入文件标签 
-		Header("Content-type: application/text"); 
-		Header("Accept-Ranges: bytes");
-	    Header("Content-Transfer-Encoding: binary"); 		
-		Header("Accept-Length: ".$size); 
-		Header("Content-Disposition: attachment; filename=" . $name); 
-			// 输出文件内容
-		Header("Content-length: ".$size);
-		ob_clean();
-		flush();
-		print_r( fread($file,filesize($dou->info('BackupFilePath').'/'.$_SESSION["filename"]))); 
-		fclose($file);
-		exit;
-		
-	default:
-		if ($addr[1] != "" && $addr[2] != "" )     //生成顶部导航和左边导航必须参数
-		{ 
-			$data = $dou->convert($addr[1],$addr[2]);
-			if($data[2] != "" && $data[3] != "")  //判断当前要访问的变量是否存在，如
-			{
-				$tab = $data[2];      //如果存在，则继续执行当前变量
-				$list = $data[3];
-				
-			} else {
-				
-				$data = $dou->convert('start','index');   //如果不存在，返回空则执行默认首页代码
-				$tab = $data[2];
-				$list = $data[3];
-			}
 
-		} else { 
-			
-			$data = $dou->convert('start','index');   //为空则判断为默认首页
-			$tab = $data[2];
-			$list = $data[3];
-		}
-}	
+// ---------- 特殊请求 ----------
+switch (isset($addr[1]) ? $addr[1] : '') {
+    case 'exit':
+        $dou->WriteLog('GET', '用户退出登录', 'index.php?/exit');
+        $dou->Logout();
+        echo '<script language="JavaScript">SystemBox(3,"您已成功退出系统！");</script>';
+        echo '<script language="JavaScript">location.replace("login.php");</script>';
+        exit;
 
-//生成首页Head部分
-$value = $dou -> Info('Index_head_New');
-preg_match_all("|{(.*)}|U", $value, $out, PREG_PATTERN_ORDER); //寻找文本中的{}字段内容
-$tlist = 0;
-while ($tlist <= count($out[1]) - 1)  
-{
-	$name = "{".$out[1][$tlist]."}";
-	switch($out[1][$tlist])
-	{
-		case 'table_list':
-			$HeadData = $dou->table_list_new($tab,$list);
-			break;
-			
-		case 'table_name':
-			$HeadData = $list;
-			break;
-		
-		default:
-			$HeadData = $dou -> Info($out[1][$tlist]);
-			break;
-	}
-	//print_r($HeadData);
-	$value = str_ireplace($name,$HeadData,$value);
-	$tlist = $tlist + 1;
-	//print_r($tlist);
-} 
-//生成结束
-//print_r($value);
-$PageData = $value;
-echo $PageData;
+    case 'downbackup':
+        $file = isset($_SESSION['sm_backup_filename']) ? (string)$_SESSION['sm_backup_filename'] : '';
+        unset($_SESSION['sm_backup_filename']);
+        if ($file === '' || !preg_match('/^[A-Za-z0-9_\-\.]{1,80}$/', $file)) {
+            header('HTTP/1.1 400 Bad Request');
+            exit('非法请求');
+        }
+        $dir  = 'backup';
+        $path = ROOT_PATH . 'admin/' . $dir . '/' . $file;
+        $real = realpath($path);
+        $root = realpath(ROOT_PATH . 'admin/' . $dir);
+        if ($real === false || $root === false || strpos($real, $root . DIRECTORY_SEPARATOR) !== 0) {
+            header('HTTP/1.1 404 Not Found');
+            exit('文件不存在');
+        }
+        $size = filesize($real);
+        $name = str_replace(array("\r", "\n", '"', "'"), '', $file);
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header("Content-Type: application/octet-stream");
+        header("Content-Length: " . $size);
+        header("Content-Disposition: attachment; filename=\"" . $name . "\"");
+        header("X-Content-Type-Options: nosniff");
+        $fp = fopen($real, 'rb');
+        if ($fp) {
+            fpassthru($fp);
+            fclose($fp);
+        }
+        exit;
 
-//生成首页数据
-$bottom = $dou->PageLoading($data[2],$data[3]);
-$file = dirname(__FILE__) . '/' . $bottom; 
-if(file_exists(strtolower($file)) != TRUE)  //检查页面是否存在
-{  //不存在
-	echo $dou -> Admin_ErrorPage ( $addr[1] , $addr[2] , $file); 
-	
-} else {    
-		
-	include $bottom;
-	
+    default:
+        // ---------- 生成顶部导航与左侧导航参数 ----------
+        if (($addr[1] ?? '') !== '' && ($addr[2] ?? '') !== '') {
+            $data = $dou->convert($addr[1], $addr[2]);
+            if (empty($data['table']) || empty($data['menu'])) {
+                $data = $dou->convert('start', 'index');
+            }
+        } else {
+            $data = $dou->convert('start', 'index');
+        }
+        $tab  = isset($data['table']) ? $data['table'] : '';
+        $list = isset($data['menu']) ? $data['menu'] : '';
+
+        if ($tab === '' || $list === '') {
+            header('HTTP/1.1 404 Not Found');
+            echo $dou->Admin_ErrorPage($addr[1] ?? '', $addr[2] ?? '', 'zd_adminlist');
+            exit;
+        }
 }
-//生成结束
+
+// ---------- 生成后台 Head 部分 ----------
+$value = (string)$dou->Info('Index_head_New');
+preg_match_all('/{([A-Za-z0-9_]+)}/', $value, $out, PREG_PATTERN_ORDER);
+if (!empty($out[1])) {
+    foreach (array_unique($out[1]) as $tag) {
+        switch ($tag) {
+            case 'table_list':
+                $HeadData = $dou->table_list_new($tab, $list);
+                break;
+            case 'table_name':
+                $HeadData = h($list);
+                break;
+            case 'bottom':
+            case 'corp':
+            case 'name':
+            case 'version':
+            case 'logo':
+                $HeadData = h((string)$dou->Info($tag));
+                break;
+            default:
+                $HeadData = '';
+                break;
+        }
+        $value = str_replace('{' . $tag . '}', $HeadData, $value);
+    }
+}
+echo $value;
+
+// ---------- 生成后台页面主体 ----------
+$bottom = $dou->PageLoading($tab, $list);
+$adminRoot = realpath(dirname(__FILE__));
+$isSafe = $bottom !== ''
+    && preg_match('#^[A-Za-z0-9_\-/.]+\.php$#', $bottom)
+    && strpos($bottom, '..') === false;
+
+$realFile = $isSafe ? realpath(dirname(__FILE__) . '/' . $bottom) : false;
+
+if ($realFile === false || $adminRoot === false || strpos($realFile, $adminRoot) !== 0 || !is_file($realFile)) {
+    echo $dou->Admin_ErrorPage(isset($addr[1]) ? $addr[1] : '', isset($addr[2]) ? $addr[2] : '', $bottom);
+} else {
+    // 让被包含页面可以读取 $addr/$tab/$list
+    include $realFile;
+}
 ?>
 
 		<footer class="footer">
 			<ul class="list-inline" style="text-align:center">
-				<li ><?php echo $dou -> Info('bottom'); ?></li>
+				<li><?php echo h((string)$dou->Info('bottom')); ?></li>
 			</ul>
 		</footer>
 	</div>
