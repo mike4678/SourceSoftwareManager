@@ -99,8 +99,18 @@ if ($absDir === false) {
 }
 
 if ($action === 'add') {
+    // 上传内容超过 post_max_size 时，PHP 会丢弃整个请求体，$_FILES/$_POST 都是空的，
+    // 此时给出准确提示，避免误报为“未接收到上传文件”
+    if (empty($_FILES) && empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && (int)$_SERVER['CONTENT_LENGTH'] > 0) {
+        echo json_encode(array('status' => '-1', 'message' => '上传内容超过服务器限制（post_max_size），请压缩文件或调大 PHP 配置'));
+        exit;
+    }
     if (empty($_FILES['mypic']) || !isset($_FILES['mypic']['error'])) {
         echo json_encode(array('status' => '-1', 'message' => '未接收到上传文件'));
+        exit;
+    }
+    if ($_FILES['mypic']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['mypic']['error'] === UPLOAD_ERR_FORM_SIZE) {
+        echo json_encode(array('status' => '-1', 'message' => '文件超过服务器 upload_max_filesize 限制'));
         exit;
     }
     if ($_FILES['mypic']['error'] !== UPLOAD_ERR_OK) {

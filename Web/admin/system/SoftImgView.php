@@ -297,7 +297,11 @@ $(function () { //文件上传处理
 		var progress = $(".progress");
 		var files = $(".files");
 		var btn = $(".btn span");
-		$("#fileupload").wrap("<form id='myupload' action='upload.php?act=add&ifr=<?php echo h($mode); ?>&id=<?php echo (int)$softId; ?>' method='post' enctype='multipart/form-data' style='margin-left:65px;margin-top:-25px'></form>");
+		// 只包装一次：重复 wrap 会造成嵌套表单 / 重复 id，第二次上传时服务端取不到文件
+		if (!$("#fileupload").closest("#myupload").length) {
+			$("#myupload").remove();
+			$("#fileupload").wrap("<form id='myupload' action='upload.php?act=add&ifr=<?php echo h($mode); ?>&id=<?php echo (int)$softId; ?>' method='post' enctype='multipart/form-data' style='margin-left:65px;margin-top:-25px'></form>");
+		}
 		$("#myupload").ajaxSubmit({
 			dataType:  'json',
 			beforeSend: function() {
@@ -324,6 +328,8 @@ $(function () { //文件上传处理
 					$("#fileupload").show();
 					progress.hide();
 					files.show();
+					// 清空选择框，允许再次选择同一个文件重传
+					$("#fileupload").val('');
 				}
 			}
 		});

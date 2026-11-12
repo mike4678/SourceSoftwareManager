@@ -251,7 +251,12 @@ $(function () { //文件上传处理
 		var progress = $(".progress");
 		var files = $(".files");
 		var btn = $(".btn span");
-		$("#fileupload").wrap("<form id='myupload' action='upload.php?act=add&ifr=program' method='post' enctype='multipart/form-data'></form>");
+		// 只在第一次上传时包装表单：原来每次 change 都 wrap，会生成嵌套表单 /
+		// 重复的 #myupload，第二次起提交的就不是含文件的那个表单，服务端收到空 $_FILES
+		if (!$("#fileupload").closest("#myupload").length) {
+			$("#myupload").remove();
+			$("#fileupload").wrap("<form id='myupload' action='upload.php?act=add&ifr=program' method='post' enctype='multipart/form-data'></form>");
+		}
 		$("#myupload").ajaxSubmit({
 			dataType:  'json',
 			beforeSend: function() {
@@ -292,6 +297,8 @@ $(function () { //文件上传处理
 					btn.html("上传失败");
 					bar.width('0');
 					files.html($('<span>').text(data.message));
+					// 清空选择框，保证再次选择同一个文件时也能触发 change 重新上传
+					$("#fileupload").val('');
 				}
 			}
 		});

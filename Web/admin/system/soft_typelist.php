@@ -6,6 +6,9 @@
 /*  2. 列表与输入框回显统一 h() 转义，消除存储型 XSS
 /*  3. 修正 <<?php 造成的多余 < 与未初始化变量
 /*  4. 未登录直接中断
+/*  5. 【本轮修复】增加重名校验：新增/改名时若已存在同名分类则拒绝，
+/*     避免出现同名分类；删除与改名改为按主键 uid 定位，
+/*     原实现 DELETE ... WHERE type='名称' 会把所有同名分类一起删掉。
 /* ---------------------------------------------------- */
 require("../../kernl/Init.php");
 
@@ -19,10 +22,37 @@ $dou->FormCheck();
 $DataValue    = "div class='form-group' style='display:none'";
 $ControlValue = "div class=\"form-group\" style=\"text-align:center\"";
 $oldType      = '';
+$oldUid       = 0;
+$notice       = '';
+
+/* 取单条分类（按 uid） */
+function sm_type_by_uid($dou, $uid)
+{
+    $uid = to_int($uid, 0);
+    if ($uid <= 0) {
+        return null;
+    }
+    $row = $dou->fetch_array($dou->query("SELECT `uid`,`type` FROM `zd_type` WHERE `uid` = " . $uid . " LIMIT 1"));
+    return empty($row) ? null : $row;
+}
+
+/* 判断同名分类是否已存在（$exceptUid 为改名时的自身 uid） */
+function sm_type_exists($dou, $type, $exceptUid = 0)
+{
+    $type = trim($type);
+    if ($type === '') {
+        return false;
+    }
+    $row = $dou->fetch_array($dou->query("SELECT `uid` FROM `zd_type` WHERE `type` = " . $dou->quote($type) . " LIMIT 1"));
+    if (empty($row)) {
+        return false;
+    }
+    return !($exceptUid > 0 && (int)$row['uid'] === (int)$exceptUid);
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $submit = isset($_POST['submit']) ? (string)$_POST['submit'] : '';
-    $selected = isset($_POST['tableSelect']) ? trim(urldecode((string)$_POST['tableSelect'])) : '';
+    $submit   = isset($_POST['submit']) ? (string)$_POST['submit'] : '';
+    $selected = isset($_POST['tableSelect']) ? to_int($_POST['tableSelect'], 0) : 0;
 
     switch ($submit) {
         case 'add':
@@ -31,21 +61,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             break;
 
         case 'edit':
-            if ($selected === '') {
+            if ($selected <= 0) {
                 echo '<script language="JavaScript">window.alert("未选择需要修改的分类名称！")</script>';
             } else {
-                $DataValue    = "div class='form-group'";
-                $ControlValue = "div class=\"form-group\" style='display:none'";
-                $oldType      = $selected;
+                $row = sm_type_by_uid($dou, $selected);
+                if ($row === null) {
+                    echo '<script language="JavaScript">window.alert("该分类不存在，可能已被删除！")</script>';
+                } else {
+                    $DataValue    = "div class='form-group'";
+                    $ControlValue = "div class=\"form-group\" style='display:none'";
+                    $oldType      = (string)$row['type'];
+                    $oldUid       = (int)$row['uid'];
+                }
             }
             break;
 
         case 'del':
-            if ($selected === '') {
+            if ($selected <= 0) {
                 echo '<script language="JavaScript">window.alert("未选择需要删除的分类名称！")</script>';
                 break;
             }
-            $sql = "DELETE FROM `zd_type` WHERE `type` = " . $dou->quote($selected);
+            if (sm_type_by_uid($dou, $selected) === null) {
+                echo '<script language="JavaScript">window.alert("该分类不存在，可能已被删除！")</script>';
+                break;
+            }
+            // 按主键删除，避免同名分类被一起删掉
+            $sql = "DELETE FROM `zd_type` WHERE `uid` = " . $selected;
             if (!$dou->query($sql)) {
                 echo '<script language="JavaScript">window.alert("删除失败！")</script>';
             } else {
@@ -64,14 +105,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             if (mb_strlen($typeData, 'UTF-8') > 30) {
                 echo '<script language="JavaScript">window.alert("分类名称过长！")</script>';
+                $DataValue    = "div class='form-group'";
+                $ControlValue = "div class=\"form-group\" style='display:none'";
                 break;
             }
+
             if ($actionType === 'add') {
-                $sql = "INSERT INTO `zd_type` (`type`) VALUES (" . $dou->quote($typeData) . ")";
+                if (sm_type_exists($dou, $typeData, 0)) {
+                    echo '<script language="JavaScript">window.alert("分类“' . js_text($typeData) . '”已存在，不能重复添加！")</script>';
+                    $DataValue    = "div class='form-group'";
+                    $ControlValue = "div class=\"form-group\" style='display:none'";
+                    $oldType      = $typeData;
+                    break;
+                }
+                $sql = "INSERT INTO `zd_type` (`type`,`application`) VALUES ("
+                    . $dou->quote($typeData) . ",'pc')";
             } else {
-                $old = isset($_POST['old_type']) ? trim(urldecode((string)$_POST['old_type'])) : '';
+                $oldU = isset($_POST['old_uid']) ? to_int($_POST['old_uid'], 0) : 0;
+                $row  = sm_type_by_uid($dou, $oldU);
+                if ($row === null) {
+                    echo '<script language="JavaScript">window.alert("该分类不存在，可能已被删除！")</script>';
+                    break;
+                }
+                if (sm_type_exists($dou, $typeData, $oldU)) {
+                    echo '<script language="JavaScript">window.alert("分类“' . js_text($typeData) . '”已存在，不能重名！")</script>';
+                    $DataValue    = "div class='form-group'";
+                    $ControlValue = "div class=\"form-group\" style='display:none'";
+                    $oldType      = (string)$row['type'];
+                    $oldUid       = (int)$row['uid'];
+                    break;
+                }
                 $sql = "UPDATE `zd_type` SET `type` = " . $dou->quote($typeData)
-                    . " WHERE `type` = " . $dou->quote($old);
+                    . " WHERE `uid` = " . (int)$row['uid'];
             }
             if (!$dou->query($sql)) {
                 echo '<script language="JavaScript">window.alert("操作失败！")</script>';
@@ -103,17 +168,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
          	<form method="post" id="contact" action="#">
 			<input type="hidden" name="action_type" value="<?php echo h(isset($_POST['submit']) ? $_POST['submit'] : ''); ?>">
 			<input type="hidden" name="old_type" value="<?php echo h($oldType); ?>">
+			<input type="hidden" name="old_uid" value="<?php echo (int)$oldUid; ?>">
 			<h4 class="box-title" style="text-align:center">软件分类列表</h4>
                 <div class="form-group">
                         <select name="tableSelect" size="10" id="tableSelect" class="form-control">
            				 <?php
 						$UData = $dou->fetch_array_all('zd_type');
 						foreach ($UData as $value) {
-						    $t = isset($value['type']) ? (string)$value['type'] : '';
-						    if ($t === '') {
+						    $t   = isset($value['type']) ? (string)$value['type'] : '';
+						    $uid = isset($value['uid']) ? (int)$value['uid'] : 0;
+						    if ($t === '' || $uid <= 0) {
 						        continue;
 						    }
-						    echo '<option value="' . h($t) . '">' . h($t) . '</option>';
+						    // 选项值用主键 uid，显示文字为分类名，避免同名时无法区分
+						    echo '<option value="' . $uid . '">' . h($t) . '</option>';
 						}
 						?>
             			</select>
@@ -121,7 +189,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 				<<?php echo $DataValue; ?>>
 					<div class="form-group">
 					<label for="sitename" name="Address">分类名称</label>
-					<input name="type_data" class="form-control" type="text" tabindex="1" value="<?php echo h($oldType); ?>"/>
+					<input name="type_data" class="form-control" type="text" tabindex="1" maxlength="30" value="<?php echo h($oldType); ?>"/>
 					</div>
 					<div class="form-group" style="text-align:center">
 					<button name="submit" type="submit" class="btn btn-xs waves-effect waves-light" value="success">确定</button>
