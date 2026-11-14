@@ -51,6 +51,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $last = end($addr);
         if (is_string($last) && strpos($last, 'id') === 0) {
             $dou->DelData($validTable, 'id', substr($last, 2), 'GET');
+            $dou->OpLog('删除数据', '表 ' . $validTable . '，id=' . substr((string)$last, 0, 80));
             exit;
         }
         break;
@@ -67,6 +68,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         } elseif (!empty($_POST['id'])) {
             $ids = is_array($_POST['id']) ? $_POST['id'] : array($_POST['id']);
             $dou->DelData($validTable, 'id', implode(',', array_map('strval', $ids)), 'POST');
+            $dou->OpLog('批量删除数据', '表 ' . $validTable . '，id=' . substr(implode(',', array_map('strval', $ids)), 0, 200));
             exit;
         }
         break;

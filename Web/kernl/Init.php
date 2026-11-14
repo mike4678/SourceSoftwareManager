@@ -79,29 +79,9 @@ function sm_csrf_field()
     return '<input type="hidden" name="csrf" value="' . h(SM_CSRF) . '">';
 }
 
-// ---------- 同源校验：拦截跨站发起的 POST（CSRF） ----------
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $selfHost = isset($_SERVER['HTTP_HOST']) ? strtolower((string)$_SERVER['HTTP_HOST']) : '';
-    $origin   = isset($_SERVER['HTTP_ORIGIN']) ? (string)$_SERVER['HTTP_ORIGIN'] : '';
-    $referer  = isset($_SERVER['HTTP_REFERER']) ? (string)$_SERVER['HTTP_REFERER'] : '';
-    $bad      = false;
-    if ($origin !== '') {
-        $h = parse_url($origin, PHP_URL_HOST);
-        $p = parse_url($origin, PHP_URL_PORT);
-        $src = $h ? strtolower($h) . ($p ? ':' . $p : '') : '';
-        $bad = ($src !== '' && $src !== $selfHost);
-    } elseif ($referer !== '' && $selfHost !== '') {
-        $h = parse_url($referer, PHP_URL_HOST);
-        $p = parse_url($referer, PHP_URL_PORT);
-        $src = $h ? strtolower($h) . ($p ? ':' . $p : '') : '';
-        $bad = ($src !== '' && $src !== $selfHost);
-    }
-    if ($bad) {
-        http_response_code(403);
-        echo '非法来源的请求已被拦截';
-        exit;
-    }
-}
+// ---------- 同源校验：拦截跨站发起的 POST（CSRF）
+// 说明：受后台“安全防御 → CSRF 防护”开关控制（defense_csrf），
+// 由于需要读取设置表，实际执行放在实例化 $dou 之后（见下方）。
 
 // ---------- 配置文件检查 ----------$confFile = ROOT_PATH . 'kernl/Conf.php';
 if (!file_exists($confFile)) {
@@ -138,6 +118,31 @@ if (!class_exists('Utils_Caption') && file_exists(ROOT_PATH . 'kernl/Caption.Cla
 // ---------- 实例化类 ----------
 $dou        = new System(DBSERVER, USER, PASSWORD, DB, 'utf8mb4');
 $FileControl = new FileUtil();
+
+// ---------- 同源校验（可后台开关：安全防御 → CSRF 防护） ----------
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && $dou->Defense('csrf')) {
+    $selfHost = isset($_SERVER['HTTP_HOST']) ? strtolower((string)$_SERVER['HTTP_HOST']) : '';
+    $origin   = isset($_SERVER['HTTP_ORIGIN']) ? (string)$_SERVER['HTTP_ORIGIN'] : '';
+    $referer  = isset($_SERVER['HTTP_REFERER']) ? (string)$_SERVER['HTTP_REFERER'] : '';
+    $bad      = false;
+    if ($origin !== '') {
+        $h = parse_url($origin, PHP_URL_HOST);
+        $p = parse_url($origin, PHP_URL_PORT);
+        $src = $h ? strtolower($h) . ($p ? ':' . $p : '') : '';
+        $bad = ($src !== '' && $src !== $selfHost);
+    } elseif ($referer !== '' && $selfHost !== '') {
+        $h = parse_url($referer, PHP_URL_HOST);
+        $p = parse_url($referer, PHP_URL_PORT);
+        $src = $h ? strtolower($h) . ($p ? ':' . $p : '') : '';
+        $bad = ($src !== '' && $src !== $selfHost);
+    }
+    if ($bad) {
+        $dou->WriteLog('POST', '【安全】跨站 POST 请求被同源校验拦截', isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '-');
+        http_response_code(403);
+        echo '非法来源的请求已被拦截';
+        exit;
+    }
+}
 
 // ---------- 校验基础表是否存在（轻量检查，不做全表遍历） ----------
 $requiredTables = array('zd_admin_user', 'zd_adminlist', 'zd_content_data', 'zd_system_log', 'zd_system_setting');

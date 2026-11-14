@@ -232,6 +232,7 @@ if ($action === 'add') {
             exit;
     }
 
+    $dou->OpLog('上传文件', '接口 ' . $frame . '，保存为 ' . $picname . '（' . round($picsize / 1024, 2) . 'KB）');
     echo json_encode(array(
         'name'    => $picname,
         'pic'     => $pics,
@@ -262,8 +263,10 @@ if ($action === 'add') {
         exit;
     }
     if (@unlink($real)) {
+        $dou->OpLog('删除上传文件', '接口 ' . $frame . '，文件 ' . $filename);
         echo json_encode(array('status' => '0', 'message' => ''));
     } else {
+        $dou->OpLog('删除上传文件', '接口 ' . $frame . '，文件 ' . $filename, '失败');
         echo json_encode(array('status' => '-1', 'message' => '删除失败！'));
     }
     exit;

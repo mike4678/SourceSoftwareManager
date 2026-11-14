@@ -20,15 +20,34 @@ if ($_SERVER["REQUEST_METHOD"] == "GET") {
         $dou->cookie("up", '');
         $dou->cookie("adv", '');
         $dou->cookie("email", '');
+        $dou->cookie("def", '');
     }
 }
 
-/** 更新单个系统设置项 */
+/** 更新单个系统设置项（不存在则自动创建，便于安全防御等新配置项） */
 function sm_set_setting($dou, $vars, $value)
 {
+    $exists = $dou->fetch_array($dou->query(
+        "SELECT `vars` FROM `zd_system_setting` WHERE `vars` = " . $dou->quote($vars) . " LIMIT 1"
+    ));
+    if (!$exists) {
+        return $dou->query("INSERT INTO `zd_system_setting` (`vars`, `value`, `备注`) VALUES ("
+            . $dou->quote($vars) . "," . $dou->quote($value) . "," . $dou->quote('由系统设置页创建') . ")");
+    }
     $sql = "UPDATE `zd_system_setting` SET `value` = " . $dou->quote($value)
         . " WHERE `vars` = " . $dou->quote($vars);
     return $dou->query($sql);
+}
+
+/** 安全防御开关的单个选项组 */
+function sm_def_radio($name, $label, $enabled, $desc)
+{
+    $on  = $enabled ? ' checked' : '';
+    $off = $enabled ? '' : ' checked';
+    return '<div class="form-group"><label>' . h($label) . '</label>'
+        . '<div class="radio info"><input type="radio" name="' . h($name) . '" value="1" id="' . h($name) . '_on"' . $on . '><label for="' . h($name) . '_on">启用</label></div>'
+        . '<div class="radio info"><input type="radio" name="' . h($name) . '" value="0" id="' . h($name) . '_off"' . $off . '><label for="' . h($name) . '_off">关闭</label></div>'
+        . '<p class="help-block" style="margin:0 0 10px 0;color:#888">' . h($desc) . '</p></div>';
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['Tab'])) {
@@ -81,12 +100,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['Tab'])) {
             }
 
             if (!$ok) {
+                $dou->OpLog('修改基础设置', '网站名称/维护状态/分页/验证码等', '失败');
                 echo '<script language="JavaScript">SystemBox(3,"更新失败")</script>';
             } else {
-                echo '<script language="JavaScript">SystemBox(3,"参数已更新！")</script>';
                 $dou->cookie("set", 'active', 300);
                 $dou->cookie("up", '', 300);
                 $dou->cookie("adv", '', 300);
+                $dou->cookie("def", '', 300);
+                $detail = '网站名称=' . $settings['name'] . '；维护模式=' . ($serverState === '1' ? '开' : '关')
+                    . '；每页显示=' . $disp . '；验证码=' . ($vaildCode === '0' ? '启用' : '禁用')
+                    . '；密匙=' . ($pwdNew !== '' && $pwdNew !== $oldKey ? '已变更' : '未变更');
+                $dou->OpLog('修改基础设置', $detail);
+                echo '<script language="JavaScript">SystemBox(3,"参数已更新！")</script>';
             }
             break;
 
@@ -100,14 +125,46 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['Tab'])) {
                 echo '<script language="JavaScript">SystemBox(3,"上传大小必须大于 0！")</script>';
                 echo '<script language="JavaScript">window.history.back();</script>';
             } else {
+                $oldSize = (string)$dou->Info('upload_size');
                 if (sm_set_setting($dou, 'upload_size', (string)round($fileSize, 2))) {
-                    echo '<script language="JavaScript">SystemBox(3,"参数已更新！")</script>';
                     $dou->cookie("set", '', 300);
                     $dou->cookie("up", 'active', 300);
                     $dou->cookie("adv", '', 300);
+                    $dou->cookie("def", '', 300);
+                    $dou->OpLog('修改上传设置', '单个文件大小上限 ' . $oldSize . 'MB → ' . round($fileSize, 2) . 'MB');
+                    echo '<script language="JavaScript">SystemBox(3,"参数已更新！")</script>';
                 } else {
+                    $dou->OpLog('修改上传设置', '单个文件大小上限=' . round($fileSize, 2) . 'MB', '失败');
                     echo '<script language="JavaScript">SystemBox(3,"更新失败")</script>';
                 }
+            }
+            break;
+
+        case 'tab-defense':
+            $defense = array(
+                'defense_csrf' => (isset($_POST['d_csrf']) && (string)$_POST['d_csrf'] === '1') ? '1' : '0',
+                'defense_xss'  => (isset($_POST['d_xss']) && (string)$_POST['d_xss'] === '1') ? '1' : '0',
+                'defense_sqli' => (isset($_POST['d_sqli']) && (string)$_POST['d_sqli'] === '1') ? '1' : '0',
+                'defense_path' => (isset($_POST['d_path']) && (string)$_POST['d_path'] === '1') ? '1' : '0',
+            );
+            $ok = true;
+            $buf = array();
+            foreach ($defense as $k => $v) {
+                if (!sm_set_setting($dou, $k, $v)) {
+                    $ok = false;
+                }
+                $buf[] = str_replace('defense_', '', $k) . '=' . ($v === '1' ? '启用' : '关闭');
+            }
+            $dou->cookie("set", '', 300);
+            $dou->cookie("up", '', 300);
+            $dou->cookie("adv", '', 300);
+            $dou->cookie("def", 'active', 300);
+            if ($ok) {
+                $dou->OpLog('修改安全防御开关', implode('；', $buf));
+                echo '<script language="JavaScript">SystemBox(3,"防护设置已保存！")</script>';
+            } else {
+                $dou->OpLog('修改安全防御开关', implode('；', $buf), '失败');
+                echo '<script language="JavaScript">SystemBox(3,"保存失败")</script>';
             }
             break;
 
@@ -125,20 +182,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['Tab'])) {
                     "SELECT `username` FROM `zd_admin_user` WHERE `password` = " . $dou->quote($oldHash) . " LIMIT 1"
                 ));
                 if (!$row) {
+                    $dou->OpLog('修改后台登录密码', '旧密码校验失败', '失败');
                     echo '<script language="JavaScript">SystemBox(3,"旧密码输入错误，请重新输入！")</script>';
                     echo '<script language="JavaScript">window.history.go(-1);</script>';
                     exit;
                 }
                 if ($newPwd !== $confNewPwd) {
+                    $dou->OpLog('修改后台登录密码', '两次输入不一致', '失败');
                     echo '<script language="JavaScript">SystemBox(3,"两次输入的密码不一致，请重新输入！")</script>';
                     echo '<script language="JavaScript">window.history.go(-1);</script>';
                     exit;
                 }
                 $newHash = Account::PwdEnc($newPwd, key);
                 if (!$dou->query("UPDATE `zd_admin_user` SET `password` = " . $dou->quote($newHash) . " WHERE `username` = 'admin'")) {
+                    $dou->OpLog('修改后台登录密码', '', '失败');
                     echo '<script language="JavaScript">SystemBox(3,"修改密码失败")</script>';
                     echo '<script language="JavaScript">window.history.go(-1);</script>';
                 } else {
+                    $dou->OpLog('修改后台登录密码', '账号 admin 密码已更新');
                     echo '<script language="JavaScript">SystemBox(3,"密码已更新，请重新登陆")</script>';
                     echo '<script language="JavaScript">window.location.href="index.php?/exit"</script>';
                 }
@@ -156,12 +217,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['Tab'])) {
 $setTab   = (isset($_COOKIE['set']) && $_COOKIE['set'] === 'active') ? 'active' : '';
 $emailTab = (isset($_COOKIE['email']) && $_COOKIE['email'] === 'active') ? 'active' : '';
 $upTab    = (isset($_COOKIE['up']) && $_COOKIE['up'] === 'active') ? 'active' : '';
+$defTab   = (isset($_COOKIE['def']) && $_COOKIE['def'] === 'active') ? 'active' : '';
 
 $data = array(
     "TabName" => array("TabName" => ""),
     array("Name" => "基础设置", "tab" => '#tab-set', "active" => $setTab),
     array("Name" => "用户设置", "tab" => '#tab-email', "active" => $emailTab),
     array("Name" => "上传设置", "tab" => '#tab-upload', "active" => $upTab),
+    array("Name" => "安全防御", "tab" => '#tab-defense', "active" => $defTab),
 );
 
 $dou->FormCreate($data);
@@ -212,6 +275,47 @@ $(function () {
 		});
 	});
 });
+</script>
+<script>
+// 上传参数列表：弹窗内新增/编辑/删除成功后回调，实时刷新，不必整页 reload
+function smRefreshUploadFrame() {
+	var el = document.getElementById('uploadSelect');
+	if (!el) { return; }
+	$.getJSON('system/uploadframe.php?m=list&_=' + new Date().getTime(), function (rows) {
+		var keep = el.value;
+		el.innerHTML = '';
+		for (var i = 0; i < rows.length; i++) {
+			var o = document.createElement('option');
+			o.value = rows[i][0];
+			o.text = rows[i][0] + '(' + String(rows[i][1]).replace(/\*/g, '、') + ')';
+			el.appendChild(o);
+		}
+		if (keep) { el.value = keep; }
+	});
+}
+
+// 打开上传参数弹窗（固定 id，便于操作成功后精确关闭）
+function SmOpenUploadFrame(mode, title, w, h) {
+	try {
+		if (window.art && art.dialog.list && art.dialog.list['smUploadFrame']) {
+			art.dialog.list['smUploadFrame'].close();
+		}
+		art.dialog.open('system/uploadframe.php?m=' + mode, { id: 'smUploadFrame', title: title, width: w, height: h });
+	} catch (e) {
+		SystemBox(2, 'system/uploadframe.php?m=' + mode, '', title, w, h);
+	}
+}
+
+// 供弹窗调用：刷新列表并关闭自身
+function smCloseUploadDialog() {
+	try {
+		if (window.art && art.dialog.list && art.dialog.list['smUploadFrame']) {
+			art.dialog.list['smUploadFrame'].close();
+			return true;
+		}
+	} catch (e) {}
+	return false;
+}
 </script>
 <div class="tab-content" id="myTabContent">
   <div class="tab-pane fade in <?php echo $setTab; ?>" role="tabpanel" id="tab-set" aria-labelledby="home-tab">
@@ -311,11 +415,34 @@ $(function () {
             }
             echo '</select><br />';
             ?>
-            <input type="button" class="btn btn-xs waves-effect waves-light" value="添加" onclick="javascript:SystemBox(2,'system/uploadframe.php?m=add', '','新增上传框架', 400,420)">
-            <input type="button" class="btn btn-xs waves-effect waves-light" value="编辑" onclick="javascript:SystemBox(2,'system/uploadframe.php?m=edit','','修改上传框架',402,420)">
-            <input type="button" class="btn btn-xs waves-effect waves-light" value="删除" onclick="javascript:SystemBox(2,'system/uploadframe.php?m=del', '','删除上传框架',235,420)">
+            <input type="button" class="btn btn-xs waves-effect waves-light" value="添加" onclick="SmOpenUploadFrame('add','新增上传框架',400,420)">
+            <input type="button" class="btn btn-xs waves-effect waves-light" value="编辑" onclick="SmOpenUploadFrame('edit','修改上传框架',402,420)">
+            <input type="button" class="btn btn-xs waves-effect waves-light" value="删除" onclick="SmOpenUploadFrame('del','删除上传框架',235,420)">
           </div>
           <div><button class="btn btn-primary btn-sm waves-effect waves-light" type="submit">提交</button></div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="tab-pane fade <?php echo $defTab; ?> in" role="tabpanel" id="tab-defense" aria-labelledby="home-tab">
+    <form method="post" class="form-x" action="#">
+      <input type="hidden" name="Tab" value="tab-defense">
+      <div class="row">
+        <div class="col-md-12 col-xs-12">
+          <div class="form-group">
+            <p class="help-block" style="color:#666">
+              这里的开关只控制“请求特征拦截”与“CSRF 同源校验”这几道外围防线；
+              SQL 参数化、输出转义（h）为代码级固定处理，不随开关变化，关闭任一项都会降低防护强度。
+            </p>
+          </div>
+          <?php
+          echo sm_def_radio('d_csrf', 'CSRF 防护（跨站请求伪造）', $dou->Defense('csrf'), '对后台所有 POST 做 Origin/Referer 同源校验；数据库重置等危险操作另有表单令牌校验。');
+          echo sm_def_radio('d_xss', 'XSS 关键字拦截', $dou->Defense('xss'), '拦截请求中的 script / onerror / javascript: 等脚本特征（输出转义始终生效）。');
+          echo sm_def_radio('d_sqli', 'SQL 注入关键字拦截', $dou->Defense('sqli'), '拦截 union select / information_schema / sleep( 等注入特征（SQL 参数化始终生效）。');
+          echo sm_def_radio('d_path', '路径穿越拦截', $dou->Defense('path'), '拦截请求中的 ../ 、etc/passwd 等目录穿越特征。');
+          ?>
+          <div><button class="btn btn-primary btn-sm waves-effect waves-light" type="submit">保存防护设置</button></div>
         </div>
       </div>
     </form>

@@ -14,12 +14,41 @@ if (!defined('source')) {
     exit;
 }
 
-$dou->FormCheck();
 $dou->WSCS_Check();
 
 if ($dou->AccountState() === 'Access denied') {
     header("Location: ../login.php");
     exit;
+}
+
+$mode = isset($_GET['m']) ? (string)$_GET['m'] : '';
+
+// list 为纯 JSON 接口（父页面 AJAX 调用，不在 iframe 内），不做 iframe 来源检查
+if ($mode !== 'list') {
+    $dou->FormCheck();
+}
+$dou->WSCS_Check();
+
+// ---------- 供父页面实时刷新用的 JSON 列表接口 ----------
+if ($mode === 'list') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    echo json_encode(
+        $dou->UploadFrame(),
+        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
+    exit;
+}
+
+// ---------- 操作成功后的前端回调：刷新父页面列表 + 关闭弹窗 ----------
+function sm_uploadframe_done($mode)
+{
+    return '<script>(function(){'
+        . 'try{if(window.parent&&window.parent.smRefreshUploadFrame){window.parent.smRefreshUploadFrame();}}catch(e){}'
+        . 'var closed=false;'
+        . 'try{if(window.parent&&window.parent.smCloseUploadDialog){closed=window.parent.smCloseUploadDialog();}}catch(e){}'
+        . 'if(!closed){try{window.parent.location.reload();}catch(e){window.location.reload();}}'
+        . '})();</script>';
 }
 
 // 初始化接口列表
@@ -88,10 +117,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 echo '<script language="JavaScript">window.alert("存储路径必须为 ../../目录/ 形式")</script>';
                 break;
             }
-            $data = $name . ';' . $ext . ';' . $path . '|';
-            if ($dou->UploadFrameServicing('add', $data) != 'failed') {
-                echo '<script language="JavaScript">parent.location.reload()</script>';
+            // 接口名不允许重复（重复会让上传接口互相覆盖）
+            foreach ($UData as $row) {
+                if (strcasecmp($row[0], $name) === 0) {
+                    $dou->OpLog('新增上传参数', $name, '失败：接口名已存在');
+                    echo '<script language="JavaScript">window.alert("该上传接口名已存在，请更换")</script>';
+                    exit;
+                }
             }
+            $data = $name . ';' . $ext . ';' . $path . '|';
+            $r = $dou->UploadFrameServicing('add', $data);
+            if ($r !== 'failed' && $r !== false) {
+                $dou->OpLog('新增上传参数', $name . '（后缀 ' . $ext . '，路径 ' . $path . '）');
+                echo sm_uploadframe_done('add');
+                exit;
+            }
+            $dou->OpLog('新增上传参数', $name, '失败');
             break;
 
         case 'edit':
@@ -103,10 +144,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 echo '<script language="JavaScript">window.alert("参数格式不正确")</script>';
                 break;
             }
-            $data = (int)$attrib . ';' . $ext . ';' . $path . '|';
-            if ($dou->UploadFrameServicing('edit', $data) != 'failed') {
-                echo '<script language="JavaScript">parent.location.reload()</script>';
+            $oldRow = isset($UData[(int)$attrib]) ? $UData[(int)$attrib] : null;
+            $data   = (int)$attrib . ';' . $ext . ';' . $path . '|';
+            $r = $dou->UploadFrameServicing('edit', $data);
+            if ($r !== 'failed' && $r !== false) {
+                $dou->OpLog('修改上传参数', ($oldRow ? '原：' . $oldRow[0] . ';' . $oldRow[1] . ';' . $oldRow[2] . ' → ' : '')
+                    . '新：' . $data);
+                echo sm_uploadframe_done('edit');
+                exit;
             }
+            $dou->OpLog('修改上传参数', '编号 ' . $attrib, '失败');
             break;
 
         case 'del':
@@ -114,9 +161,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 echo '<script language="JavaScript">window.alert("无效的接口编号")</script>';
                 break;
             }
-            if ($dou->UploadFrameServicing('del', $attrib) != 'failed') {
-                echo '<script language="JavaScript">parent.location.reload()</script>';
+            $oldRow = isset($UData[(int)$attrib]) ? $UData[(int)$attrib] : null;
+            $r = $dou->UploadFrameServicing('del', $attrib);
+            if ($r !== 'failed' && $r !== false) {
+                $dou->OpLog('删除上传参数', $oldRow ? $oldRow[0] . ';' . $oldRow[1] . ';' . $oldRow[2] : '编号 ' . $attrib);
+                echo sm_uploadframe_done('del');
+                exit;
             }
+            $dou->OpLog('删除上传参数', '编号 ' . $attrib, '失败');
             break;
     }
 }

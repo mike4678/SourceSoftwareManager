@@ -289,6 +289,60 @@ class System extends DbMysql
     }
     /* ---------------------------------------------------- */
 
+    /* 安全防御开关读取
+    /* 配置项：defense_csrf / defense_xss / defense_sqli / defense_path
+    /* 未配置（升级前的老站点）一律视为“开启”，保证默认安全 */
+    function Defense($name)
+    {
+        static $cache = array();
+        if (array_key_exists($name, $cache)) {
+            return $cache[$name];
+        }
+        $val = $this->Info('defense_' . $name);
+        $cache[$name] = ($val === null) ? true : ((string)$val !== '0');
+        return $cache[$name];
+    }
+
+    /* 当前登录的后台账号                                  */
+    function CurrentUser()
+    {
+        if (isset($_SESSION['sm_user']) && $_SESSION['sm_user'] !== '') {
+            return (string)$_SESSION['sm_user'];
+        }
+        return '未登录';
+    }
+
+    /* 后台操作日志：记录“谁 + 做了什么 + 结果”
+    /* 与 WriteLog 的区别是统一加前缀与操作人，日志页即可直接读 */
+    function OpLog($action, $detail = '', $result = '成功', $addr = '')
+    {
+        $text = '【操作】' . $this->CurrentUser() . ' | ' . (string)$action;
+        if ($detail !== '') {
+            $text .= ' | ' . (string)$detail;
+        }
+        $text .= ' | 结果：' . (string)$result;
+        if ($addr === '') {
+            $addr = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '-';
+        }
+        $this->WriteLog('POST', $text, $addr);
+    }
+
+    /* 登录审计日志：登录成功 / 登录失败 / 退出 / 验证码错误等 */
+    function LoginAudit($event, $username = '', $result = '成功', $extra = '')
+    {
+        $text = '【登录审计】' . (string)$event;
+        if ($username !== '') {
+            $text .= ' | 账号：' . substr((string)$username, 0, 50);
+        }
+        if ($extra !== '') {
+            $text .= ' | ' . (string)$extra;
+        }
+        $text .= ' | 结果：' . (string)$result;
+        $this->WriteLog('POST', $text, isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : 'Login.php');
+    }
+
+    /* ---------------------------------------------------- */
+
     /* 上传大小检查                                           */
     function CheckUploadSize()
     {
@@ -754,7 +808,8 @@ class System extends DbMysql
                 if ($index < 0 || !isset($ReturnData[$index])) {
                     return 'failed';
                 }
-                $ReturnData[$index] = array($pieces[0], $pieces[1] ?? '', $pieces[2] ?? '');
+                // 保留原接口名，只替换后缀与路径（原实现会把名称写成索引号）
+                $ReturnData[$index] = array($ReturnData[$index][0], $pieces[1] ?? '', $pieces[2] ?? '');
                 $buf = '';
                 foreach ($ReturnData as $val) {
                     if (strpos($val[2], "|") === false) {
@@ -766,7 +821,10 @@ class System extends DbMysql
                 break;
             case 'del':
                 $index = to_int($data, -1);
-                $buf   = '';
+                if ($index < 0 || !isset($ReturnData[$index])) {
+                    return 'failed';
+                }
+                $buf = '';
                 unset($ReturnData[$index]);
                 foreach ($ReturnData as $value) {
                     $buf .= $value[0] . ";" . $value[1] . ";" . $value[2] . "|";
@@ -779,7 +837,7 @@ class System extends DbMysql
         if (!$this->query($sql)) {
             return 'failed';
         }
-        echo '<meta charset="utf-8"><script language="JavaScript">window.alert("操作成功！")</script>';
+        // 提示交由调用页面输出（此处曾 echo alert，导致页面结构被插入脚本）
         return true;
     }
 
@@ -874,11 +932,30 @@ class System extends DbMysql
     /* ---------------------------------------------------- */
     function WSCS_Check()
     {
-        $needles = array(
-            '<script', '%3cscript', 'javascript:', 'onerror=', 'onload=', 'onmouseover=',
-            'union select', 'information_schema', 'into outfile', 'load_file(', 'sleep(',
-            'benchmark(', '../', '..\\', 'etc/passwd', 'base64_decode(', 'eval(',
+        /* 按类别分组，由后台“安全防御”开关决定是否启用：
+        /*   defense_xss  — 脚本/事件/伪协议等 XSS 特征
+        /*   defense_sqli — SQL 注入关键字
+        /*   defense_path — 路径穿越特征
+        /* 关闭某一组只影响本层“关键字拦截”，SQL 参数化与输出转义始终生效 */
+        $groups = array(
+            'xss'  => array('<script', '%3cscript', 'javascript:', 'onerror=', 'onload=',
+                            'onmouseover=', 'onfocus=', 'srcdoc=', 'document.cookie', '<iframe'),
+            'sqli' => array('union select', 'information_schema', 'into outfile', 'load_file(',
+                            'sleep(', 'benchmark(', 'extractvalue(', 'updatexml(',
+                            'base64_decode(', 'eval(', 'declare @'),
+            'path' => array('../', '..\\', 'etc/passwd', 'web-inf', 'proc/self', 'php://input'),
         );
+
+        $needles = array();
+        foreach ($groups as $group => $list) {
+            if ($this->Defense($group)) {
+                $needles = array_merge($needles, $list);
+            }
+        }
+        if (empty($needles)) {
+            return;
+        }
+
         $targets = array();
         if (!empty($_SERVER['QUERY_STRING'])) {
             $targets[] = rawurldecode($_SERVER['QUERY_STRING']);

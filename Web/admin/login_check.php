@@ -34,6 +34,7 @@ if ($maxTry < 1) {
 $trySession = isset($_SESSION['sm_login_fail']) ? (int)$_SESSION['sm_login_fail'] : 0;
 $tryCookie  = isset($_COOKIE['SourceTryCount']) ? (int)$_COOKIE['SourceTryCount'] : 0;
 if (max($trySession, $tryCookie) >= $maxTry) {
+    $dou->LoginAudit('登录被拒绝（超过最大尝试次数）', $username, '失败', '会话次数=' . $trySession . '，IP次数=' . $tryCookie);
     echo json_encode(array('status' => '-1', 'message' => '超过最大尝试次数，请稍后再试！'));
     exit;
 }
@@ -46,6 +47,7 @@ if ((string)$dou->Info('VaildCode') === '0') {
     if ($code === '' || $expect === '' || strcasecmp($code, $expect) !== 0) {
         $_SESSION['sm_login_fail'] = $trySession + 1;
         $dou->cookie("SourceTryCount", $tryCookie + 1, time() + 36000);
+        $dou->LoginAudit('登录失败（验证码错误）', $username, '失败');
         echo json_encode(array('status' => '-1', 'message' => '验证码错误'));
         exit;
     }
@@ -54,6 +56,7 @@ if ((string)$dou->Info('VaildCode') === '0') {
 if (empty($username) || empty($PWD)) {
     $_SESSION['sm_login_fail'] = $trySession + 1;
     $dou->cookie("SourceTryCount", $tryCookie + 1, time() + 36000);
+    $dou->LoginAudit('登录失败（用户名或密码为空）', $username, '失败');
     echo json_encode(array('status' => '-2', 'message' => '用户名或密码不能为空'));
     exit;
 }
@@ -92,7 +95,7 @@ if ($row && isset($row['password']) && is_string($row['password'])) {
 if (!$ok) {
     $_SESSION['sm_login_fail'] = $trySession + 1;
     $dou->cookie("SourceTryCount", $tryCookie + 1, time() + 36000);
-    $dou->WriteLog('POST', '用户尝试登陆，但密码错误！用户名：' . substr($username, 0, 50), 'Login.php');
+    $dou->LoginAudit('登录失败（用户名或密码错误）', $username, '失败', '已尝试 ' . ($trySession + 1) . ' 次');
     echo json_encode(array('status' => '-3', 'message' => '用户名或密码错误'));
     exit;
 }
@@ -114,5 +117,5 @@ $time = date('Y-m-d H:i:s');
 $dou->query("UPDATE `zd_admin_user` SET `lasttime` = " . $dou->quote($time) . ", `lastip` = " . $dou->quote($iipp)
     . " WHERE `username` = " . $dou->quote($username));
 
-$dou->WriteLog('POST', '用户登陆成功', 'Login.php');
+$dou->LoginAudit('登录成功', $username, '成功', '记住登录=' . ($save ? '是' : '否') . '，IP=' . $iipp);
 echo json_encode(array('status' => '0', 'message' => 'success'));

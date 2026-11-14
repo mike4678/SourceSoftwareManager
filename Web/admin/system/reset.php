@@ -29,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $token = isset($_POST['csrf']) ? (string)$_POST['csrf'] : '';
 $csrf  = isset($_SESSION['sm_csrf']) ? (string)$_SESSION['sm_csrf'] : '';
-if ($csrf === '' || !hash_equals($csrf, $token)) {
+// 受“安全防御 → CSRF 防护”开关控制；关闭时不校令牌，但仍记录日志
+if ($dou->Defense('csrf') && ($csrf === '' || !hash_equals($csrf, $token))) {
     $dou->WriteLog('POST', '系统重置被拒绝：CSRF 令牌校验失败', 'reset.php');
     http_response_code(403);
     echo '<meta charset="utf-8"><script>alert("非法请求，已阻止重置操作！");history.back(-1);</script>';
@@ -45,7 +46,11 @@ foreach ($tables as $t) {
     }
 }
 
-$dou->WriteLog('POST', '用户执行软件管家数据库重置，失败表：' . (empty($failed) ? '无' : implode(',', $failed)), 'reset.php');
+$dou->OpLog(
+    '重置软件管家数据库',
+    '清空 zd_imgdata/zd_type/zd_software/zd_feedback/zd_config，失败表：' . (empty($failed) ? '无' : implode(',', $failed)),
+    empty($failed) ? '成功' : '部分失败'
+);
 
 if (!empty($failed)) {
     echo '<meta charset="utf-8"><script>alert("部分数据表重置失败：' . h(implode(',', $failed)) . '");history.back(-1);</script>';

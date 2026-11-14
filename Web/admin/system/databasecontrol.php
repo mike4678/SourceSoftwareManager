@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* ---------------------------------------------------- */
 /* 数据库备份 / 恢复 / 删除 / 清空
 /* 安全修订说明（2026）：
@@ -102,7 +102,7 @@ switch ($control) {
         }
         @chmod($path, 0644);
         echo json_encode(array('status' => '0', 'message' => '数据备份成功<br>备份文件 [ admin/backup/' . h($name) . ' ]'));
-        $dou->WriteLog('POST', '管理员执行数据库备份', $addr);
+        $dou->OpLog('数据库备份', '备份文件 admin/backup/' . $name, '成功', $addr);
         break;
 
     case '恢复数据库':
@@ -162,7 +162,7 @@ switch ($control) {
             }
         }
         echo json_encode(array('status' => '0', 'message' => $info));
-        $dou->WriteLog('POST', '管理员执行恢复数据库', $addr);
+        $dou->OpLog('数据库恢复', '使用备份文件 ' . $filename, '成功', $addr);
         break;
 
     case '删除备份':
@@ -173,15 +173,15 @@ switch ($control) {
         $file = sm_backup_path($filename);
         if ($file === false) {
             echo json_encode(array('status' => '-1', 'message' => '× 删除失败，文件不存在或路径非法!'));
-            $dou->WriteLog('POST', "删除备份：" . substr($filename, 0, 100) . "失败！", $addr);
+            $dou->OpLog('删除备份', '文件 ' . substr($filename, 0, 100), '失败：不存在或路径非法', $addr);
             exit;
         }
         if (!@unlink($file)) {
             echo json_encode(array('status' => '-1', 'message' => '× 删除失败!'));
-            $dou->WriteLog('POST', "删除备份：" . basename($file) . "失败！", $addr);
+            $dou->OpLog('删除备份', '文件 ' . basename($file), '失败', $addr);
         } else {
             echo json_encode(array('status' => '0', 'message' => '√ 删除成功!'));
-            $dou->WriteLog('POST', "删除备份：" . basename($file) . "成功！", $addr);
+            $dou->OpLog('删除备份', '文件 ' . basename($file), '成功', $addr);
         }
         break;
 
@@ -205,7 +205,7 @@ switch ($control) {
             }
         }
         echo json_encode(array('status' => '0', 'message' => $info));
-        $dou->WriteLog('POST', '管理员执行清空数据表操作', $addr);
+        $dou->OpLog('清空数据表', '按 AllowDatabase 清空：' . substr((string)$dou->Info('AllowDatabase'), 0, 150), '成功', $addr);
         break;
 
     case '下载备份':

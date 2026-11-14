@@ -114,9 +114,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             . $d->quote($softType) . ")";
 
         if (!$d->query($sql)) {
+            $d->OpLog('新增软件', $name . ' ' . $version, '失败');
             echo '<script language="JavaScript">window.alert("新增失败！")</script>';
             exit;
         }
+        $d->OpLog('新增软件', $name . ' ' . $version . '（分类：' . $type . '，模式：' . $postMode . '）');
         echo '<script language="JavaScript">window.alert("新增成功!")</script>';
         echo '<script language="JavaScript">self.location=document.referrer;</script>';
         exit;
@@ -146,9 +148,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         . " WHERE `id` = " . $softId;
 
     if (!$d->query($sql)) {
+        $d->OpLog('修改软件', 'id=' . $softId . ' ' . $name, '失败');
         echo '<script language="JavaScript">window.alert("修改失败！")</script>';
         exit;
     }
+    $d->OpLog('修改软件', 'id=' . $softId . ' ' . $name . ' ' . $version . '（分类：' . $type . '）');
     echo '<script language="JavaScript">window.alert("修改成功!")</script>';
     echo '<script language="JavaScript">self.location=document.referrer;</script>';
     exit;

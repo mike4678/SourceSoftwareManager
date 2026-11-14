@@ -86,10 +86,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 break;
             }
             // 按主键删除，避免同名分类被一起删掉
+            $delRow = sm_type_by_uid($dou, $selected);
             $sql = "DELETE FROM `zd_type` WHERE `uid` = " . $selected;
             if (!$dou->query($sql)) {
+                $dou->OpLog('删除软件分类', 'uid=' . $selected . ' ' . ($delRow ? $delRow['type'] : ''), '失败');
                 echo '<script language="JavaScript">window.alert("删除失败！")</script>';
             } else {
+                $dou->OpLog('删除软件分类', 'uid=' . $selected . ' ' . ($delRow ? $delRow['type'] : ''));
                 echo '<script language="JavaScript">self.location=document.referrer;</script>';
             }
             break;
@@ -139,8 +142,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     . " WHERE `uid` = " . (int)$row['uid'];
             }
             if (!$dou->query($sql)) {
+                $dou->OpLog($actionType === 'add' ? '新增软件分类' : '修改软件分类', $typeData, '失败');
                 echo '<script language="JavaScript">window.alert("操作失败！")</script>';
             } else {
+                if ($actionType === 'add') {
+                    $dou->OpLog('新增软件分类', $typeData);
+                } else {
+                    $dou->OpLog('修改软件分类', 'uid=' . (int)$row['uid'] . ' ' . (string)$row['type'] . ' → ' . $typeData);
+                }
                 echo '<script language="JavaScript">self.location=document.referrer;</script>';
             }
             break;

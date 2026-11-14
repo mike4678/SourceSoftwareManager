@@ -43,8 +43,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['Tab'])) {
             }
 
             if (!$dou->query($sql)) {
+                $dou->OpLog('修改软件管家设置', '公告/版本号/下载链接', '失败');
                 echo '<script language="JavaScript">SystemBox(3,"更新失败")</script>';
             } else {
+                $dou->OpLog('修改软件管家设置', '公告/版本号/下载链接 已更新');
                 echo '<script language="JavaScript">SystemBox(3,"参数已更新！")</script>';
                 $dou->cookie("set", 'active');
             }

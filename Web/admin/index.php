@@ -27,7 +27,7 @@ if ($state === 'Access denied') {
 // ---------- 特殊请求 ----------
 switch (isset($addr[1]) ? $addr[1] : '') {
     case 'exit':
-        $dou->WriteLog('GET', '用户退出登录', 'index.php?/exit');
+        $dou->LoginAudit('退出登录', $dou->CurrentUser(), '成功');
         $dou->Logout();
         echo '<script language="JavaScript">SystemBox(3,"您已成功退出系统！");</script>';
         echo '<script language="JavaScript">location.replace("login.php");</script>';
