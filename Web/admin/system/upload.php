@@ -194,16 +194,19 @@ if ($action === 'add') {
         case 'softlogo':
             $imgBlob = file_get_contents($pic_path);
             $dou->UpdateSoftwareLogo($imgBlob);
+            @unlink($pic_path);   // 已写入数据库，落地文件不再保留
             break;
 
         case 'logoview':
             $imgBlob = file_get_contents($pic_path);
             $dou->UpdateSoftwareLogoData('local', $imgBlob, isset($_GET['id']) ? $_GET['id'] : 0);
+            @unlink($pic_path);
             break;
 
         case 'imgview':
             $imgBlob = file_get_contents($pic_path);
             $dou->UpdateSoftwareImgData('local', $imgBlob, isset($_GET['id']) ? $_GET['id'] : 0);
+            @unlink($pic_path);
             break;
 
         case 'program':

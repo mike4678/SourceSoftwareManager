@@ -44,12 +44,34 @@ if ($page < 1) {
 $search = '';
 $where  = '';
 
+// 后台目录（如 /admin），用于拼接删除链接的绝对路径
+$adminBase = str_replace('\\', '/', dirname(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/admin/index.php'));
+$adminBase = rtrim($adminBase, '/');
+if ($adminBase === '') { $adminBase = '/admin'; }
+
 // ---------- 请求处理 ----------
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
         // 兼容 /id12 形式的删除
         $last = end($addr);
         if (is_string($last) && strpos($last, 'id') === 0) {
+            // 删除是破坏性操作，CSRF 防护开启时只接受同源发起的请求，
+            // 避免第三方页面用 <img src="…/id1"> 之类的方式诱导管理员误删数据
+            if ($dou->Defense('csrf')) {
+                $selfHost = isset($_SERVER['HTTP_HOST']) ? strtolower((string)$_SERVER['HTTP_HOST']) : '';
+                $referer  = isset($_SERVER['HTTP_REFERER']) ? (string)$_SERVER['HTTP_REFERER'] : '';
+                $refHost  = '';
+                if ($referer !== '') {
+                    $h = parse_url($referer, PHP_URL_HOST);
+                    $p = parse_url($referer, PHP_URL_PORT);
+                    $refHost = $h ? strtolower($h) . ($p ? ':' . $p : '') : '';
+                }
+                if ($refHost === '' || ($selfHost !== '' && $refHost !== $selfHost)) {
+                    header('HTTP/1.1 403 Forbidden');
+                    echo '<meta charset="utf-8"><script>window.alert("非法来源的删除请求已被拦截");history.back();</script>';
+                    exit;
+                }
+            }
             $dou->DelData($validTable, 'id', substr($last, 2), 'GET');
             $dou->OpLog('删除数据', '表 ' . $validTable . '，id=' . substr((string)$last, 0, 80));
             exit;
@@ -132,8 +154,14 @@ if ($count < 1) {
                 }
             }
         }
-        // 删除链接里的占位替换（相对地址，避免 Host 注入）
-        $html = str_replace('$_SERVER[PHP_SELF]?$_SERVER[QUERY_STRING]', h('index.php?/' . $tab . '/' . $listKey), $html);
+        // 删除链接里的占位替换
+        // 说明：模板里 Del('$_SERVER[PHP_SELF]?$_SERVER[QUERY_STRING]/id{id} ')
+        // 而 js 里是 'http://' + window.location.host + addr
+        // 必须替换成带前导斜杠的绝对路径（如 /admin/index.php?...），
+        // 否则会拼出 http://localhost:81index.php?... 这种非法主机名，点击“确定”后无任何反应。
+        $html = str_replace('$_SERVER[PHP_SELF]?$_SERVER[QUERY_STRING]', h($adminBase . '/index.php?/' . $tab . '/' . $listKey), $html);
+        // 模板中 id 后带有一个多余空格（如 /id50 ')，URL 里会被编码成 %20，这里去掉
+        $html = preg_replace('/id(\d{1,20}) \'/', "id$1'", $html);
         echo $html;
     }
 
