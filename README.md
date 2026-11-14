@@ -15,6 +15,8 @@ Manager端：已开发完成，目前大部分Bug已修复
 
 Client端：Beta版，目前大部分Bug已修复
 
+Web端：Beta版，目前大部分Bug已修复
+
 Android端：待客户端开发完成后，开始编写
 
 
